@@ -1,6 +1,6 @@
 use wgpu::{Device, Queue, RenderPipeline, Surface, SurfaceConfiguration, util::DeviceExt};
 use winit::dpi::PhysicalSize;
-use super::Vertex;
+use super::{Vertex, vertex_array::VertexArray};
 
 const VERTICES: &[Vertex] = &[
     Vertex { position: [-0.0868241, 0.49240386, 0.0], color: [0.5, 0.0, 0.5] }, // A
@@ -24,8 +24,7 @@ pub struct Renderer {
     config: SurfaceConfiguration,
     size: PhysicalSize<u32>,
     render_pipeline : RenderPipeline,
-    vertex_buffer : wgpu::Buffer,
-    index_buffer : wgpu::Buffer,
+    vertex_array : VertexArray
 }
 
 impl Renderer {
@@ -112,19 +111,7 @@ impl Renderer {
             multisample : wgpu::MultisampleState { count: 1, mask: !0, alpha_to_coverage_enabled: false }
         });
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label : Some("Vertex Buffer"),
-            contents : bytemuck::cast_slice(VERTICES) ,
-            usage : wgpu::BufferUsages::VERTEX,
-        });
-
-        let index_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label : Some("Index Buffer"),
-                contents : bytemuck::cast_slice(INDICES),
-                usage : wgpu::BufferUsages::INDEX,
-            }
-        );
+        let vertex_array = VertexArray::new(&device, VERTICES, INDICES);
 
         println!("Returning renderer");
         Self {
@@ -134,8 +121,7 @@ impl Renderer {
             config,
             size,
             render_pipeline, 
-            vertex_buffer,
-            index_buffer,
+            vertex_array,
         }
     }
 
@@ -180,11 +166,7 @@ impl Renderer {
         });
 
         render_pass.set_pipeline(&self.render_pipeline);
-        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        render_pass.draw_indexed(0..INDICES.len() as u32, 0, 0..1);
-
-        drop(render_pass);
+        self.vertex_array.draw(render_pass);
 
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
