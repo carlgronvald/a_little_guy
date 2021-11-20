@@ -10,3 +10,4 @@ mod vertex;
 pub use vertex::Vertex;
 
 mod vertex_array;
+mod texture;
