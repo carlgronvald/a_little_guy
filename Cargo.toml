@@ -7,8 +7,11 @@ edition = "2021"
 
 [dependencies]
 legion = "0.4.0"
-winit = "*"
+winit = { version = "0.25.0", features = ["serde"] }
 wgpu="0.11.0"
 pollster = "0.2.4"
 bytemuck = "1.7.2"
 image = "0.23.14"
+serde = { version = "1.0.130", features = ["derive"] }
+toml = "0.5.8"
+nalgebra-glm = { version = "0.11.*", features = ["serde-serialize"] }

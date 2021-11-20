@@ -14,6 +14,11 @@ pub struct Velocity {
     pub dy: f32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Rotation {
+    pub roll : f32
+}
+
 ///
 /// Marker struct for the player entity
 ///
