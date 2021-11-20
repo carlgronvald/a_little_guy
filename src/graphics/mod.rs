@@ -5,3 +5,6 @@ mod window;
 pub use window::start_window;
 
 mod renderer;
+
+mod vertex;
+pub use vertex::Vertex;

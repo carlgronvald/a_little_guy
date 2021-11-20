@@ -1,5 +1,12 @@
-use wgpu::{Device, Queue, RenderPipeline, Surface, SurfaceConfiguration};
+use wgpu::{Device, Queue, RenderPipeline, Surface, SurfaceConfiguration, util::DeviceExt};
 use winit::dpi::PhysicalSize;
+use super::Vertex;
+
+const VERTICES: &[Vertex] = &[
+    Vertex { position: [0.0, 0.5, 0.0], color: [1.0, 0.0, 0.0] },
+    Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0] },
+    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
+];
 
 pub struct Renderer {
     surface: Surface,
@@ -8,6 +15,7 @@ pub struct Renderer {
     config: SurfaceConfiguration,
     size: PhysicalSize<u32>,
     render_pipeline : RenderPipeline,
+    vertex_buffer : wgpu::Buffer,
 }
 
 impl Renderer {
@@ -68,7 +76,9 @@ impl Renderer {
             vertex : wgpu::VertexState {
                 module : &shader,
                 entry_point : "vs_main",
-                buffers : &[]
+                buffers : &[
+                    Vertex::desc(),
+                ]
             },
             fragment : Some(wgpu::FragmentState {
                 module : &shader,
@@ -92,6 +102,12 @@ impl Renderer {
             multisample : wgpu::MultisampleState { count: 1, mask: !0, alpha_to_coverage_enabled: false }
         });
 
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label : Some("Vertex Buffer"),
+            contents : bytemuck::cast_slice(VERTICES) ,
+            usage : wgpu::BufferUsages::VERTEX,
+        });
+
         println!("Returning renderer");
         Self {
             surface,
@@ -100,6 +116,7 @@ impl Renderer {
             config,
             size,
             render_pipeline, 
+            vertex_buffer
         }
     }
 
@@ -144,6 +161,7 @@ impl Renderer {
         });
 
         render_pass.set_pipeline(&self.render_pipeline);
+        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.draw(0..3, 0..1);
 
         drop(render_pass);

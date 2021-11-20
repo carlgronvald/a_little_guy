@@ -114,7 +114,6 @@ impl Window {
         if let Some(el) = self.event_loop.take() {
             el.run(move |event, _, control_flow| {
                 *control_flow = ControlFlow::Poll;
-                println!("Event: {:?}", event);
 
                 match event {
                     Event::LoopDestroyed => {} //TODO: HANDLE LOOP DESTROYED
