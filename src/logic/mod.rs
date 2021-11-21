@@ -1,5 +1,5 @@
 mod components;
-pub use components::{Player, Position, Velocity, Rotation};
+pub use components::{Player, Position, Velocity, Rotation, Asset};
 
 mod resources;
 pub use resources::Time;

@@ -1,4 +1,4 @@
-use crate::graphics::ExternalEvent;
+use crate::{graphics::ExternalEvent, logic::Position};
 //use graphics::RenderMessages;
 //use graphics::GraphicsCapabilities;
 //use game::GraphicsStateModel;
@@ -13,9 +13,9 @@ pub struct WindowToLogicReceiver {
 }
 
 pub struct LogicToWindowSender {
-    pub render_pack: Arc<Mutex<Option<()>>>,
+    pub render_pack: mpsc::SyncSender<Vec<Position>>,
 }
 
 pub struct LogicToWindowReceiver {
-    pub render_pack: Arc<Mutex<Option<()>>>,
+    pub render_pack: mpsc::Receiver<Vec<Position>>,
 }

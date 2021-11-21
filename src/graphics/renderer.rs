@@ -1,6 +1,8 @@
 use wgpu::{BindGroupLayout, Device, Queue, RenderPipeline, ShaderModule, Surface, SurfaceConfiguration};
 use winit::dpi::PhysicalSize;
 
+use crate::logic::Position;
+
 use super::{Vertex, texture::Texture, vertex_array::VertexArray};
 const VERTICES: &[Vertex] = &[
     // Changed
@@ -179,7 +181,7 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, draw_state : Vec<Position>) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture().unwrap();
 
         let view = output
@@ -210,9 +212,29 @@ impl Renderer {
             depth_stencil_attachment: None,
         });
 
+        let vertices : Vec<Vertex>= draw_state.iter().flat_map(
+            |pos| {
+                [
+                    Vertex { position : [pos.x, pos.y, 0.0], tex_coords : [0.0, 1.0] },
+                    Vertex { position : [pos.x+1.0, pos.y, 0.0], tex_coords : [1.0, 1.0] },
+                    Vertex { position : [pos.x+1.0, pos.y+1.0, 0.0], tex_coords : [1.0, 0.0] },
+                    Vertex { position : [pos.x, pos.y+1.0, 0.0], tex_coords : [0.0, 0.0] },
+                ]
+            }
+        ).collect();
+        let indices : Vec<u16> = draw_state.iter().enumerate().flat_map (
+            |(i, _)| {
+                [(i*4) as u16, (i*4+1) as u16, (i*4+2) as u16,
+                (i*4) as u16, (i*4+2) as u16, (i*4+3) as u16]
+            }
+        ).collect();
+
+
+        let vertex_array = VertexArray::new(&self.device, &vertices, &indices);
+
         render_pass.set_pipeline(&self.render_pipeline);
         self.diffuse_texture.bind(0, &mut render_pass);
-        self.vertex_array.draw(render_pass);
+        vertex_array.draw(render_pass);
 
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();

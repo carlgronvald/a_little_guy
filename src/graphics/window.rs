@@ -21,7 +21,7 @@ pub struct Window {
     event_loop: Option<winit::event_loop::EventLoop<()>>,
     window : winit::window::Window,
     rx: LogicToWindowReceiver,
-    state: Renderer,
+    renderer: Renderer,
 }
 
 pub type EventHandler = Box<dyn FnMut(winit::event::Event<()>) + Send + 'static>;
@@ -37,12 +37,12 @@ impl Window {
             .with_inner_size(winit::dpi::LogicalSize::new(1024.0, 768.0));
         let window = wb.build(&el).unwrap();
 
-        let mut state = pollster::block_on(Renderer::new(&window));
+        let renderer = pollster::block_on(Renderer::new(&window));
 
-        let screen_dimensions = (
-            window.inner_size().width,
-            window.inner_size().height,
-        );
+        //let screen_dimensions = (
+        //    window.inner_size().width,
+        //    window.inner_size().height,
+        //);
 
 
         //info!("Loading wgpu!");
@@ -53,7 +53,7 @@ impl Window {
             event_loop: Some(el),
             window,
             rx,
-            state,
+            renderer,
         };
 
         res
@@ -89,12 +89,19 @@ impl Window {
     // }
 
     fn render(&mut self) {
-        println!("Rendering!");
-        self.state.render().unwrap();
+        //println!("Rendering!");
+
+        match self.rx.render_pack.try_recv() {
+            Ok(draw_state) => { self.renderer.render(draw_state).unwrap(); }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                panic!("The logic thread has disconnected!");
+            }
+            _ => { }
+        }
     }
 
     fn update_screen_dimensions(&mut self, screen_dimensions: PhysicalSize<u32>) {
-        self.state.resize(screen_dimensions);
+        self.renderer.resize(screen_dimensions);
 
         //gl::Viewport(0, 0, screen_dimensions.0 as i32, screen_dimensions.1 as i32);
         // self.render_caller

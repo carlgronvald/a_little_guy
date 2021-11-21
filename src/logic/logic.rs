@@ -4,9 +4,9 @@ use std::thread::{self, JoinHandle};
 use legion::*;
 
 use crate::channels::{LogicToWindowSender, WindowToLogicReceiver};
-use super::{Player, Position, Rotation, Time, Velocity, controls, external_event_handler, update_positions_system, update_velocities_system};
+use super::{Player, Position, Time, Velocity, Asset, controls, external_event_handler, update_positions_system, update_velocities_system};
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime};
 
 
 pub fn setup_world() -> (World, Entity) {
@@ -18,6 +18,7 @@ pub fn setup_world() -> (World, Entity) {
         Position { x: 0.0, y: 0.0 },
         Velocity { dx: 0.02, dy: 0.0 },
         Player {},
+        Asset {},
     ));
 
     let mut query = <&Position>::query();
@@ -55,11 +56,13 @@ pub fn step(world: &mut World, schedule: &mut Schedule, resources: &mut Resource
 pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) -> JoinHandle<()> {
     thread::spawn(move || {
         let event_receiver = rx.channel_receiver;
-        let graphics_sender_mutex = tx.render_pack;
+        let graphics_sender = tx.render_pack;
 
         let (mut world, player) = setup_world();
         let mut schedule = setup_schedule();
         let mut resources = setup_resources();
+
+        let mut drawing_query = <(&Asset, &Position)>::query();
 
         let mut evh = external_event_handler::ExternalEventHandler::new(controls::ControlConfig::default());
 
@@ -86,10 +89,26 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             }
 
             step(&mut world, &mut schedule, &mut resources);
+
+            //TODO: COLLISION
+
+
+            let render_state : Vec<Position> = drawing_query.iter(&world).map(
+                |(asset, position)| {
+                    *position
+                }
+            ).collect();
+            let _ = graphics_sender.send(render_state);
+
+
+            //TODO: RENDERING
+
             let end_time = SystemTime::now();
             let tick_duration = end_time.duration_since(start_time).unwrap().as_millis();
             if tick_duration < 33 {
                 std::thread::sleep(std::time::Duration::from_millis((33-tick_duration) as u64))
+            } else {
+                println!("Tick took longer than 33ms!");
             }
         }
 

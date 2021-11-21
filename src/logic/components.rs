@@ -19,6 +19,11 @@ pub struct Rotation {
     pub roll : f32
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Asset {
+
+}
+
 ///
 /// Marker struct for the player entity
 ///

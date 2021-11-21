@@ -4,7 +4,7 @@ mod logic;
 mod channels;
 mod graphics;
 
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{mpsc};
 
 fn main() {
     let (game_event_sender, game_event_receiver) = mpsc::channel();
@@ -15,12 +15,12 @@ fn main() {
         channel_receiver: game_event_receiver,
     };
 
-    let render_mutex = Arc::new(Mutex::new(None));
+    let (graphics_sender, graphics_receiver) = mpsc::sync_channel(1);
     let logic_to_window_sender = channels::LogicToWindowSender {
-        render_pack: render_mutex.clone(),
+        render_pack: graphics_sender,
     };
     let logic_to_window_receiver = channels::LogicToWindowReceiver {
-        render_pack: render_mutex,
+        render_pack: graphics_receiver,
     };
 
     let logic_join_handle =
