@@ -5,32 +5,7 @@ use winit::dpi::PhysicalSize;
 
 use crate::logic::Position;
 
-use super::{texture::Texture, vertex_array::VertexArray, Vertex};
-const VERTICES: &[Vertex] = &[
-    // Changed
-    Vertex {
-        position: [-0.0868241, 0.49240386, 0.0],
-        tex_coords: [0.4131759, 0.00759614],
-    }, // A
-    Vertex {
-        position: [-0.49513406, 0.06958647, 0.0],
-        tex_coords: [0.0048659444, 0.43041354],
-    }, // B
-    Vertex {
-        position: [-0.21918549, -0.44939706, 0.0],
-        tex_coords: [0.28081453, 0.949397],
-    }, // C
-    Vertex {
-        position: [0.35966998, -0.3473291, 0.0],
-        tex_coords: [0.85967, 0.84732914],
-    }, // D
-    Vertex {
-        position: [0.44147372, 0.2347359, 0.0],
-        tex_coords: [0.9414737, 0.2652641],
-    }, // E
-];
-
-const INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4, /* padding */ 0];
+use super::{texture::Texture, vertex_array::VertexArray, DrawState, Vertex};
 
 pub struct Renderer {
     surface: Surface,
@@ -39,7 +14,6 @@ pub struct Renderer {
     config: SurfaceConfiguration,
     size: PhysicalSize<u32>,
     render_pipeline: RenderPipeline,
-    vertex_array: VertexArray,
     diffuse_texture: Texture,
 }
 
@@ -173,8 +147,6 @@ impl Renderer {
         let render_pipeline =
             Self::create_render_pipeline(&device, &shader, &config, &[&texture_bind_group_layout]);
 
-        let vertex_array = VertexArray::new(&device, VERTICES, INDICES);
-
         println!("Returning renderer");
         Self {
             surface,
@@ -183,7 +155,6 @@ impl Renderer {
             config,
             size,
             render_pipeline,
-            vertex_array,
             diffuse_texture,
         }
     }
@@ -197,7 +168,7 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, draw_state: Vec<Position>) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, draw_state: DrawState) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture().unwrap();
 
         let view = output
@@ -228,45 +199,7 @@ impl Renderer {
             depth_stencil_attachment: None,
         });
 
-        let vertices: Vec<Vertex> = draw_state
-            .iter()
-            .flat_map(|pos| {
-                [
-                    Vertex {
-                        position: [pos.x, pos.y, 0.0],
-                        tex_coords: [0.0, 1.0],
-                    },
-                    Vertex {
-                        position: [pos.x + 1.0, pos.y, 0.0],
-                        tex_coords: [1.0, 1.0],
-                    },
-                    Vertex {
-                        position: [pos.x + 1.0, pos.y + 1.0, 0.0],
-                        tex_coords: [1.0, 0.0],
-                    },
-                    Vertex {
-                        position: [pos.x, pos.y + 1.0, 0.0],
-                        tex_coords: [0.0, 0.0],
-                    },
-                ]
-            })
-            .collect();
-        let indices: Vec<u16> = draw_state
-            .iter()
-            .enumerate()
-            .flat_map(|(i, _)| {
-                [
-                    (i * 4) as u16,
-                    (i * 4 + 1) as u16,
-                    (i * 4 + 2) as u16,
-                    (i * 4) as u16,
-                    (i * 4 + 2) as u16,
-                    (i * 4 + 3) as u16,
-                ]
-            })
-            .collect();
-
-        let vertex_array = VertexArray::new(&self.device, &vertices, &indices);
+        let vertex_array = draw_state.create_vertex_array(&self.device);
 
         render_pass.set_pipeline(&self.render_pipeline);
         self.diffuse_texture.bind(0, &mut render_pass);

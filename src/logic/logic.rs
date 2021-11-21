@@ -6,7 +6,10 @@ use super::{
     controls, external_event_handler, update_positions_system, update_velocities_system, Asset,
     Player, Position, Time, Velocity,
 };
-use crate::channels::{LogicToWindowSender, WindowToLogicReceiver};
+use crate::{
+    channels::{LogicToWindowSender, WindowToLogicReceiver},
+    graphics::DrawState,
+};
 
 use std::time::SystemTime;
 
@@ -97,11 +100,11 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
             //TODO: COLLISION
 
-            let render_state: Vec<Position> = drawing_query
+            let draw_positions: Vec<Position> = drawing_query
                 .iter(&world)
                 .map(|(asset, position)| *position)
                 .collect();
-            let _ = graphics_sender.send(render_state);
+            let _ = graphics_sender.send(DrawState::new(draw_positions));
 
             //TODO: RENDERING
 

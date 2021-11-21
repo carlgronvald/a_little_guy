@@ -11,3 +11,6 @@ pub use vertex::Vertex;
 
 mod texture;
 mod vertex_array;
+
+mod draw_state;
+pub use draw_state::DrawState;

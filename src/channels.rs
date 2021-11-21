@@ -1,4 +1,7 @@
-use crate::{graphics::ExternalEvent, logic::Position};
+use crate::{
+    graphics::{DrawState, ExternalEvent},
+    logic::Position,
+};
 //use graphics::RenderMessages;
 //use graphics::GraphicsCapabilities;
 //use game::GraphicsStateModel;
@@ -13,9 +16,9 @@ pub struct WindowToLogicReceiver {
 }
 
 pub struct LogicToWindowSender {
-    pub render_pack: mpsc::SyncSender<Vec<Position>>,
+    pub render_pack: mpsc::SyncSender<DrawState>,
 }
 
 pub struct LogicToWindowReceiver {
-    pub render_pack: mpsc::Receiver<Vec<Position>>,
+    pub render_pack: mpsc::Receiver<DrawState>,
 }
