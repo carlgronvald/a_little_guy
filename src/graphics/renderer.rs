@@ -3,10 +3,11 @@ use wgpu::{
 };
 use winit::dpi::PhysicalSize;
 
-use crate::logic::Position;
+use super::{texture::Texture, DrawState, Vertex};
 
-use super::{texture::Texture, vertex_array::VertexArray, DrawState, Vertex};
-
+///
+/// Contains everything needed to interact with the WGPU rendering system
+/// 
 pub struct Renderer {
     surface: Surface,
     device: Device,
@@ -18,6 +19,10 @@ pub struct Renderer {
 }
 
 impl Renderer {
+
+    ///
+    /// Creates a basic pipeline that uses the default shader & rendering system.
+    /// 
     fn create_render_pipeline(
         device: &Device,
         shader: &ShaderModule,
@@ -66,6 +71,9 @@ impl Renderer {
         })
     }
 
+    ///
+    /// Initializes the WGPU rendering system
+    /// 
     pub async fn new(window: &winit::window::Window) -> Self {
         println!("Starting render creation.");
         let size = window.inner_size();
@@ -159,6 +167,9 @@ impl Renderer {
         }
     }
 
+    ///
+    /// Resizes the WGPU surface - needs to be called whenever the window changes size
+    /// 
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
@@ -168,6 +179,9 @@ impl Renderer {
         }
     }
 
+    ///
+    /// Renders the given DrawState using the default pipeline.
+    /// 
     pub fn render(&mut self, draw_state: DrawState) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture().unwrap();
 

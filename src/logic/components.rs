@@ -15,11 +15,6 @@ pub struct Velocity {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Rotation {
-    pub roll: f32,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Asset {}
 
 ///

@@ -1,11 +1,8 @@
 use crate::{
     graphics::{DrawState, ExternalEvent},
-    logic::Position,
 };
-//use graphics::RenderMessages;
-//use graphics::GraphicsCapabilities;
-//use game::GraphicsStateModel;
-use std::sync::{mpsc, Arc, Mutex};
+
+use std::sync::{mpsc};
 
 pub struct WindowToLogicSender {
     pub channel_sender: mpsc::Sender<ExternalEvent>,

@@ -2,6 +2,9 @@ use wgpu::{util::DeviceExt, Buffer, RenderPass};
 
 use super::Vertex;
 
+///
+/// Contains one vertex and index buffer for drawing.
+/// Might eventually contain several models by filling disjoint slices of the buffers with those different models.
 pub struct VertexArray {
     vertex_buffer: Buffer,
     index_buffer: Buffer,

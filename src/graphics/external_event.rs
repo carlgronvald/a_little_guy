@@ -1,5 +1,7 @@
 use winit::event::*;
 
+///
+/// An event in the window that should be sent to an external event handler.
 pub enum ExternalEvent {
     MouseMotion {
         delta: (f64, f64),
