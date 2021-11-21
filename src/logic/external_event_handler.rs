@@ -1,11 +1,9 @@
-use super::{
-    controls::{Control, ControlConfig}
-};
-use glm::{Vec2};
-use crate::graphics::ExternalEvent;
+use super::controls::{Control, ControlConfig};
 use super::state_input_event::StateInputEvent;
-use winit::event::{ElementState, MouseButton, VirtualKeyCode};
+use crate::graphics::ExternalEvent;
+use glm::Vec2;
 use std::{collections::HashMap, sync::mpsc};
+use winit::event::{ElementState, MouseButton, VirtualKeyCode};
 
 /// Handles external events and produces state input events.
 pub struct ExternalEventHandler {

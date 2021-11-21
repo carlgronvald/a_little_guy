@@ -1,7 +1,7 @@
 use std::{fs, path::Path};
 
-use winit::event::{MouseButton, VirtualKeyCode};
 use serde::{Deserialize, Serialize};
+use winit::event::{MouseButton, VirtualKeyCode};
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]

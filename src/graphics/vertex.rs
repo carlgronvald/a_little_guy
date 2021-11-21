@@ -3,8 +3,8 @@ use bytemuck::{Pod, Zeroable};
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct Vertex {
-    pub position : [f32; 3],
-    pub tex_coords : [f32; 2]
+    pub position: [f32; 3],
+    pub tex_coords: [f32; 2],
 }
 
 impl Vertex {
@@ -24,11 +24,10 @@ impl Vertex {
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x2, // NEW!
                 },
-            ]
+            ],
         }
     }
 }
-
 
 unsafe impl Pod for Vertex {}
 unsafe impl Zeroable for Vertex {}

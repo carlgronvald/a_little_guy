@@ -1,13 +1,14 @@
-
 use std::thread::{self, JoinHandle};
 
 use legion::*;
 
+use super::{
+    controls, external_event_handler, update_positions_system, update_velocities_system, Asset,
+    Player, Position, Time, Velocity,
+};
 use crate::channels::{LogicToWindowSender, WindowToLogicReceiver};
-use super::{Player, Position, Time, Velocity, Asset, controls, external_event_handler, update_positions_system, update_velocities_system};
 
-use std::time::{SystemTime};
-
+use std::time::SystemTime;
 
 pub fn setup_world() -> (World, Entity) {
     println!("Hello, world!");
@@ -64,11 +65,12 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let mut drawing_query = <(&Asset, &Position)>::query();
 
-        let mut evh = external_event_handler::ExternalEventHandler::new(controls::ControlConfig::default());
+        let mut evh =
+            external_event_handler::ExternalEventHandler::new(controls::ControlConfig::default());
 
         loop {
             let start_time = SystemTime::now();
-            
+
             evh.handle_inputs(&event_receiver);
             let events = evh.tick_events();
 
@@ -80,10 +82,13 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                             velocity.dx += delta.x;
                             velocity.dy += delta.y;
                         }
-                        _ => { }
+                        _ => {}
                     }
                 }
-                println!("Player Position: {:?}", player_entry.get_component::<Position>().unwrap());
+                println!(
+                    "Player Position: {:?}",
+                    player_entry.get_component::<Position>().unwrap()
+                );
             } else {
                 panic!("The player has disappeared!");
             }
@@ -92,25 +97,23 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
             //TODO: COLLISION
 
-
-            let render_state : Vec<Position> = drawing_query.iter(&world).map(
-                |(asset, position)| {
-                    *position
-                }
-            ).collect();
+            let render_state: Vec<Position> = drawing_query
+                .iter(&world)
+                .map(|(asset, position)| *position)
+                .collect();
             let _ = graphics_sender.send(render_state);
-
 
             //TODO: RENDERING
 
             let end_time = SystemTime::now();
             let tick_duration = end_time.duration_since(start_time).unwrap().as_millis();
             if tick_duration < 33 {
-                std::thread::sleep(std::time::Duration::from_millis((33-tick_duration) as u64))
+                std::thread::sleep(std::time::Duration::from_millis(
+                    (33 - tick_duration) as u64,
+                ))
             } else {
                 println!("Tick took longer than 33ms!");
             }
         }
-
     })
 }

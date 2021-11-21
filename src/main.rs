@@ -4,7 +4,7 @@ mod logic;
 mod channels;
 mod graphics;
 
-use std::sync::{mpsc};
+use std::sync::mpsc;
 
 fn main() {
     let (game_event_sender, game_event_receiver) = mpsc::channel();

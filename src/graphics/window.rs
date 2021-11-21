@@ -19,7 +19,7 @@ pub fn start_window(rx: LogicToWindowReceiver, tx: WindowToLogicSender) {
 
 pub struct Window {
     event_loop: Option<winit::event_loop::EventLoop<()>>,
-    window : winit::window::Window,
+    window: winit::window::Window,
     rx: LogicToWindowReceiver,
     renderer: Renderer,
 }
@@ -43,7 +43,6 @@ impl Window {
         //    window.inner_size().width,
         //    window.inner_size().height,
         //);
-
 
         //info!("Loading wgpu!");
         //graphics::RenderCaller::initialize_gl(&windowed_context);
@@ -92,11 +91,13 @@ impl Window {
         //println!("Rendering!");
 
         match self.rx.render_pack.try_recv() {
-            Ok(draw_state) => { self.renderer.render(draw_state).unwrap(); }
+            Ok(draw_state) => {
+                self.renderer.render(draw_state).unwrap();
+            }
             Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                 panic!("The logic thread has disconnected!");
             }
-            _ => { }
+            _ => {}
         }
     }
 
