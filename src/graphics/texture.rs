@@ -1,4 +1,4 @@
-use wgpu::{BindGroup, BindGroupLayout, Device, Queue, RenderPass, Sampler, TextureView};
+use wgpu::{BindGroup, BindGroupLayout, Device, Queue, Sampler, TextureView};
 
 pub struct Texture {
     view: TextureView,

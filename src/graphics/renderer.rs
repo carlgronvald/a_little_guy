@@ -1,5 +1,5 @@
 use wgpu::{
-    BindGroupLayout, Device, Queue, RenderPipeline, ShaderModule, Surface, SurfaceConfiguration,
+    Device, Queue, Surface, SurfaceConfiguration,
 };
 use winit::dpi::PhysicalSize;
 
@@ -7,7 +7,7 @@ use super::{
     pipeline::Pipeline,
     texture::Texture,
     uniforms::{DefaultUniforms, Uniform},
-    DrawState, Vertex,
+    DrawState,
 };
 
 ///
