@@ -61,15 +61,15 @@ impl<T: Pod + Zeroable> Uniform<T> {
 pub struct DefaultUniforms {
     pub x_scale: f32,
     pub y_scale: f32,
-    dummy: [f32; 2],
+    pub camera_offset: [f32; 2],
 }
 
 impl DefaultUniforms {
-    pub fn new(x_scale: f32, y_scale: f32) -> Self {
+    pub fn new(x_scale: f32, y_scale: f32, camera_offset: [f32; 2]) -> Self {
         Self {
             x_scale,
             y_scale,
-            dummy: [0.0, 0.0],
+            camera_offset,
         }
     }
 }

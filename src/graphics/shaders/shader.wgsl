@@ -5,7 +5,7 @@
 struct Uniforms {
     x_scale : f32;
     y_scale : f32;
-    dummy : vec2<f32>;
+    camera_offset : vec2<f32>;
 };
 [[group(1), binding(0)]]
 var<uniform> uniforms : Uniforms;
@@ -28,7 +28,7 @@ fn vs_main(
 ) -> VertexOutput {
     var out : VertexOutput;
     out.tex_coords = model.tex_coords;
-    out.clip_position = vec4<f32>(model.position.x * uniforms.x_scale, model.position.y * uniforms.y_scale, model.position.z,1.0);
+    out.clip_position = vec4<f32>((model.position.x + uniforms.camera_offset.x) * uniforms.x_scale, (model.position.y + uniforms.camera_offset.y) * uniforms.y_scale, model.position.z,1.0);
     return out;
 }
 

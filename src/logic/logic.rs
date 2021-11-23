@@ -1,6 +1,7 @@
 use std::thread::{self, JoinHandle};
 
 use legion::*;
+use rand::Rng;
 
 use super::{
     controls, external_event_handler, update_positions_system, update_velocities_system, Asset,
@@ -52,9 +53,29 @@ pub fn setup_resources() -> Resources {
 
 pub fn step(world: &mut World, schedule: &mut Schedule, resources: &mut Resources) {
     resources.insert(Time {
-        elapsed_seconds: 0.05,
+        elapsed_seconds: 0.033,
     });
     schedule.execute(world, resources)
+}
+
+///
+/// TODO: BAD NAME
+/// All the stuff around the player, like if they're looking somewhere or if the camera's shaking or whatever.
+struct ExtraInfo {
+    shake: f32,
+    speed: f32,
+}
+
+impl ExtraInfo {
+    pub fn new() -> Self {
+        Self {
+            shake: 0.0,
+            speed: 16.0,
+        }
+    }
+    pub fn update(&mut self) {
+        self.shake *= 0.98;
+    }
 }
 
 pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) -> JoinHandle<()> {
@@ -68,8 +89,12 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let mut drawing_query = <(&Asset, &Position)>::query();
 
+        let mut extra_info = ExtraInfo::new();
+
         let mut evh =
             external_event_handler::ExternalEventHandler::new(controls::ControlConfig::default());
+
+        let mut rng = rand::thread_rng();
 
         loop {
             let start_time = SystemTime::now();
@@ -77,17 +102,22 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             evh.handle_inputs(&event_receiver);
             let events = evh.tick_events();
 
+            // -----------------------------
+            //      Handling user input
+            // -----------------------------
             if let Some(mut player_entry) = world.entry(player) {
                 for event in events {
                     match event {
                         super::state_input_event::StateInputEvent::MovePlayerRelative { delta } => {
                             let velocity = player_entry.get_component_mut::<Velocity>().unwrap();
-                            velocity.dx += delta.x;
-                            velocity.dy += delta.y;
+                            velocity.dx += delta.x * extra_info.speed;
+                            velocity.dy += delta.y * extra_info.speed;
                         }
+                        super::state_input_event::StateInputEvent::Jump => extra_info.shake += 5.0,
                         _ => {}
                     }
                 }
+
                 println!(
                     "Player Position: {:?}",
                     player_entry.get_component::<Position>().unwrap()
@@ -96,7 +126,9 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                 panic!("The player has disappeared!");
             }
 
+            // Do world step
             step(&mut world, &mut schedule, &mut resources);
+            extra_info.update();
 
             //TODO: COLLISION
 
@@ -104,9 +136,13 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                 .iter(&world)
                 .map(|(asset, position)| *position)
                 .collect();
-            let _ = graphics_sender.send(DrawState::new(draw_positions));
-
-            //TODO: RENDERING
+            let _ = graphics_sender.send(DrawState::new(
+                draw_positions,
+                [
+                    rng.gen_range(-1.0..1.0) * extra_info.shake,
+                    rng.gen_range(-1.0..1.0) * extra_info.shake,
+                ],
+            ));
 
             let end_time = SystemTime::now();
             let tick_duration = end_time.duration_since(start_time).unwrap().as_millis();

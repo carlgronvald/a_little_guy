@@ -1,6 +1,4 @@
-use wgpu::{
-    Device, Queue, Surface, SurfaceConfiguration,
-};
+use wgpu::{Device, Queue, Surface, SurfaceConfiguration};
 use winit::dpi::PhysicalSize;
 
 use super::{
@@ -72,7 +70,14 @@ impl Renderer {
         let (texture_bind_group_layout, texture_bind_group) =
             diffuse_texture.create_bind_group(&device);
 
-        let default_uniforms = Uniform::new(&device, DefaultUniforms::new(1.0, 1.0));
+        let default_uniforms = Uniform::new(
+            &device,
+            DefaultUniforms::new(
+                1.0 / (size.width as f32),
+                1.0 / (size.height as f32),
+                [0.0, 0.0],
+            ),
+        );
         let (default_bind_group_layout, default_bind_group) =
             default_uniforms.create_bind_group(&device);
 
@@ -149,7 +154,7 @@ impl Renderer {
             depth_stencil_attachment: None,
         });
 
-        let vertex_array = draw_state.create_vertex_array(&self.device);
+        let vertex_array = draw_state.render(&self.device, &self.queue, &mut self.default_uniforms);
 
         //self.default_uniforms.update_uniform(|x| { x.x_scale *= 0.99}, &self.queue);
         self.pipeline.set(&mut render_pass);
