@@ -1,8 +1,6 @@
-use crate::{
-    graphics::{DrawState, ExternalEvent},
-};
+use crate::graphics::{DrawState, ExternalEvent};
 
-use std::sync::{mpsc};
+use std::sync::mpsc;
 
 pub struct WindowToLogicSender {
     pub channel_sender: mpsc::Sender<ExternalEvent>,

@@ -7,7 +7,7 @@ use super::{vertex_array::VertexArray, Vertex};
 ///
 /// The state sent from the logic system so the graphics knows what to draw.
 /// Contains all the business logic to convert that data to rendering (for now)
-/// 
+///
 pub struct DrawState {
     positions: Vec<Position>,
 }

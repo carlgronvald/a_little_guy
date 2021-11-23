@@ -3,77 +3,31 @@ use wgpu::{
 };
 use winit::dpi::PhysicalSize;
 
-use super::{texture::Texture, DrawState, Vertex};
+use super::{
+    pipeline::Pipeline,
+    texture::Texture,
+    uniforms::{DefaultUniforms, Uniform},
+    DrawState, Vertex,
+};
 
 ///
 /// Contains everything needed to interact with the WGPU rendering system
-/// 
+///
 pub struct Renderer {
     surface: Surface,
     device: Device,
     queue: Queue,
     config: SurfaceConfiguration,
     size: PhysicalSize<u32>,
-    render_pipeline: RenderPipeline,
+    pipeline: Pipeline,
     diffuse_texture: Texture,
+    default_uniforms: Uniform<DefaultUniforms>,
 }
 
 impl Renderer {
-
-    ///
-    /// Creates a basic pipeline that uses the default shader & rendering system.
-    /// 
-    fn create_render_pipeline(
-        device: &Device,
-        shader: &ShaderModule,
-        config: &SurfaceConfiguration,
-        bind_group_layouts: &[&BindGroupLayout],
-    ) -> RenderPipeline {
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Render Pipeline Layout"),
-                bind_group_layouts,
-                push_constant_ranges: &[],
-            });
-
-        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout: Some(&render_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: "vs_main",
-                buffers: &[Vertex::desc()],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: "fs_main",
-                targets: &[wgpu::ColorTargetState {
-                    format: config.format,
-                    blend: Some(wgpu::BlendState::REPLACE),
-                    write_mask: wgpu::ColorWrites::ALL,
-                }],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
-                polygon_mode: wgpu::PolygonMode::Fill,
-                clamp_depth: false,
-                conservative: false,
-            },
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-        })
-    }
-
     ///
     /// Initializes the WGPU rendering system
-    /// 
+    ///
     pub async fn new(window: &winit::window::Window) -> Self {
         println!("Starting render creation.");
         let size = window.inner_size();
@@ -102,36 +56,6 @@ impl Renderer {
             .await
             .unwrap();
 
-        let texture_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler {
-                            // This is only for TextureSampleType::Depth
-                            comparison: false,
-                            // This should be true if the sample_type of the texture is:
-                            //     TextureSampleType::Float { filterable: true }
-                            // Otherwise you'll get an error.
-                            filtering: true,
-                        },
-                        count: None,
-                    },
-                ],
-                label: Some("texture_bind_group_layout"),
-            });
-
         println!("{},{}", size.width, size.height);
         println!("{:?}", &device);
         let config = wgpu::SurfaceConfiguration {
@@ -144,16 +68,27 @@ impl Renderer {
         surface.configure(&device, &config);
 
         let diffuse_bytes = include_bytes!("Trees.png");
-        let diffuse_texture =
-            Texture::new(&device, &queue, diffuse_bytes, &texture_bind_group_layout);
+        let diffuse_texture = Texture::new(&device, &queue, diffuse_bytes);
+        let (texture_bind_group_layout, texture_bind_group) =
+            diffuse_texture.create_bind_group(&device);
+
+        let default_uniforms = Uniform::new(&device, DefaultUniforms::new(1.0, 1.0));
+        let (default_bind_group_layout, default_bind_group) =
+            default_uniforms.create_bind_group(&device);
 
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
         });
 
-        let render_pipeline =
-            Self::create_render_pipeline(&device, &shader, &config, &[&texture_bind_group_layout]);
+        // Create our main pipeline
+        let pipeline = Pipeline::new(
+            &device,
+            &shader,
+            &config,
+            &[&texture_bind_group_layout, &default_bind_group_layout],
+            vec![texture_bind_group, default_bind_group],
+        );
 
         println!("Returning renderer");
         Self {
@@ -162,14 +97,15 @@ impl Renderer {
             queue,
             config,
             size,
-            render_pipeline,
+            pipeline,
             diffuse_texture,
+            default_uniforms,
         }
     }
 
     ///
     /// Resizes the WGPU surface - needs to be called whenever the window changes size
-    /// 
+    ///
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
@@ -181,7 +117,7 @@ impl Renderer {
 
     ///
     /// Renders the given DrawState using the default pipeline.
-    /// 
+    ///
     pub fn render(&mut self, draw_state: DrawState) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture().unwrap();
 
@@ -215,8 +151,8 @@ impl Renderer {
 
         let vertex_array = draw_state.create_vertex_array(&self.device);
 
-        render_pass.set_pipeline(&self.render_pipeline);
-        self.diffuse_texture.bind(0, &mut render_pass);
+        //self.default_uniforms.update_uniform(|x| { x.x_scale *= 0.99}, &self.queue);
+        self.pipeline.set(&mut render_pass);
         vertex_array.draw(render_pass);
 
         self.queue.submit(std::iter::once(encoder.finish()));

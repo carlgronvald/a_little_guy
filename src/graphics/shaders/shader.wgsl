@@ -1,5 +1,16 @@
 // Vertex shader
 
+
+[[block]]
+struct Uniforms {
+    x_scale : f32;
+    y_scale : f32;
+    dummy : vec2<f32>;
+};
+[[group(1), binding(0)]]
+var<uniform> uniforms : Uniforms;
+
+
 struct VertexInput {
     [[location(0)]] position : vec3<f32>;
     [[location(1)]] tex_coords : vec2<f32>;
@@ -10,13 +21,14 @@ struct VertexOutput {
     [[location(0)]] tex_coords : vec2<f32>;
 };
 
+
 [[stage(vertex)]]
 fn vs_main(
    model : VertexInput
 ) -> VertexOutput {
     var out : VertexOutput;
     out.tex_coords = model.tex_coords;
-    out.clip_position = vec4<f32>(model.position,1.0);
+    out.clip_position = vec4<f32>(model.position.x * uniforms.x_scale, model.position.y * uniforms.y_scale, model.position.z,1.0);
     return out;
 }
 

@@ -14,3 +14,7 @@ mod vertex_array;
 
 mod draw_state;
 pub use draw_state::DrawState;
+
+mod uniforms;
+
+mod pipeline;

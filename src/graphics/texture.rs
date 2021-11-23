@@ -1,19 +1,13 @@
-use wgpu::{BindGroup, BindGroupLayout, Device, Queue, RenderPass};
+use wgpu::{BindGroup, BindGroupLayout, Device, Queue, RenderPass, Sampler, TextureView};
 
 pub struct Texture {
-    bind_group: BindGroup,
+    view: TextureView,
+    sampler: Sampler,
 }
 
 impl Texture {
-    pub fn new(
-        device: &Device,
-        queue: &Queue,
-        bytes: &[u8],
-        bind_group_layout: &BindGroupLayout,
-    ) -> Self {
-        println!("Bytes: {}", bytes.len());
+    pub fn new(device: &Device, queue: &Queue, bytes: &[u8]) -> Self {
         let image = image::load_from_memory(bytes).unwrap();
-        println!("{:?}", image.dimensions());
         let dimensions = image.dimensions();
         let rgba = image.into_rgba8();
 
@@ -51,9 +45,8 @@ impl Texture {
             texture_size,
         );
 
-        let diffuse_texture_view =
-            wgpu_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+        let texture_view = wgpu_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
@@ -63,24 +56,55 @@ impl Texture {
             ..Default::default()
         });
 
+        Self {
+            view: texture_view,
+            sampler,
+        }
+    }
+
+    pub fn create_bind_group(&self, device: &Device) -> (BindGroupLayout, BindGroup) {
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler {
+                        // This is only for TextureSampleType::Depth
+                        comparison: false,
+                        // This should be true if the sample_type of the texture is:
+                        //     TextureSampleType::Float { filterable: true }
+                        // Otherwise you'll get an error.
+                        filtering: true,
+                    },
+                    count: None,
+                },
+            ],
+            label: Some("texture_bind_group_layout"),
+        });
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+                    resource: wgpu::BindingResource::TextureView(&self.view),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
+                    resource: wgpu::BindingResource::Sampler(&self.sampler),
                 },
             ],
             label: Some("bind_group"),
         });
-        Self { bind_group }
-    }
-
-    pub fn bind<'a>(&'a self, index: u32, render_pass: &mut RenderPass<'a>) {
-        render_pass.set_bind_group(index, &self.bind_group, &[]);
+        (bind_group_layout, bind_group)
     }
 }
