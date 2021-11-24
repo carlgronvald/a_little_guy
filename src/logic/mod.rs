@@ -13,3 +13,11 @@ mod state_input_event;
 
 mod logic;
 pub use logic::start_logic_thread;
+
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+enum Direction {
+    Up, Right, Down, Left
+}

@@ -1,3 +1,4 @@
+use super::Direction;
 use super::controls::{Control, ControlConfig};
 use super::state_input_event::StateInputEvent;
 use crate::graphics::ExternalEvent;
@@ -73,6 +74,9 @@ impl ExternalEventHandler {
                     let control = Control::Keyboard { key_code };
                     self.handle_control_press(control);
                     // Handling of key presses should happen here, as the if avoids repeated presses from holding down the button.
+                } else if state == ElementState::Released {
+                    let control = Control::Keyboard { key_code };
+                    self.handle_control_release(control);
                 }
                 self.key_state
                     .insert(key_code, state == ElementState::Pressed);
@@ -85,6 +89,11 @@ impl ExternalEventHandler {
                         mouse_button: button,
                     };
                     self.handle_control_press(control);
+                } else if state == ElementState::Released {
+                    let control = Control::Mouse {
+                        mouse_button: button,
+                    };
+                    self.handle_control_release(control);
                 };
             }
         }
@@ -101,6 +110,12 @@ impl ExternalEventHandler {
         if control == self.control_config.player_interact_2 {
             self.tick_state_events
                 .push(StateInputEvent::PlayerInteract2);
+        }
+    }
+
+    fn handle_control_release(&mut self, control : Control) {
+        if control == self.control_config.shoot_right {
+            self.tick_state_events.push(StateInputEvent::Shoot(Direction::Right));
         }
     }
 
@@ -122,6 +137,14 @@ impl ExternalEventHandler {
         }
         if move_vector != Vec2::new(0., 0.) {
             state_result.push(StateInputEvent::MovePlayerRelative { delta: move_vector });
+        }
+        
+        let mut shoot_direction = None;
+        if self.control_state(self.control_config.shoot_right) {
+            shoot_direction = Some(Direction::Right);
+        }
+        if let Some(shoot_direction) = shoot_direction {
+            state_result.push(StateInputEvent::Charge(shoot_direction));
         }
         state_result
     }

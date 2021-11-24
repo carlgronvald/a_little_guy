@@ -1,6 +1,8 @@
 use glm::Vec2;
 use serde::{Deserialize, Serialize};
 
+use super::Direction;
+
 /// Represents the event of something happening outside of state that the state might need to react to.
 /// Examples are player actions and game closing.
 /// Examples do _not_ include mouse clicks or button presses.
@@ -20,6 +22,8 @@ pub enum StateInputEvent {
     PlayerInteract1,
     PlayerInteract2,
     Jump,
+    Shoot (Direction),
+    Charge (Direction)
 }
 /*
 /// Represents the entire history of input events.

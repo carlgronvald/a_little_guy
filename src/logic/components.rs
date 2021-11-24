@@ -14,8 +14,10 @@ pub struct Velocity {
     pub dy: f32,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Asset {}
+#[derive(Clone, Debug, PartialEq)]
+pub struct Asset {
+    pub name : String
+}
 
 ///
 /// Marker struct for the player entity

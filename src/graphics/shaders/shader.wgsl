@@ -28,7 +28,7 @@ fn vs_main(
 ) -> VertexOutput {
     var out : VertexOutput;
     out.tex_coords = model.tex_coords;
-    out.clip_position = vec4<f32>((model.position.x + uniforms.camera_offset.x) * uniforms.x_scale, (model.position.y + uniforms.camera_offset.y) * uniforms.y_scale, model.position.z,1.0);
+    out.clip_position = vec4<f32>((model.position.x + uniforms.camera_offset.x) * uniforms.x_scale * 2.0 - 1.0, (model.position.y + uniforms.camera_offset.y) * uniforms.y_scale * 2.0 - 1.0, model.position.z,1.0);
     return out;
 }
 
@@ -42,5 +42,9 @@ var s_diffuse : sampler;
 
 [[stage(fragment)]]
 fn fs_main(in : VertexOutput) -> [[location(0)]] vec4<f32> {
-    return textureSample(t_diffuse, s_diffuse, in.tex_coords);
+    var color : vec4<f32> = textureSample(t_diffuse, s_diffuse, in.tex_coords);
+    if (color.a == 0.0) {
+        discard;
+    }
+    return color;
 }

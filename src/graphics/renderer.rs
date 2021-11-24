@@ -65,7 +65,7 @@ impl Renderer {
         };
         surface.configure(&device, &config);
 
-        let diffuse_bytes = include_bytes!("Trees.png");
+        let diffuse_bytes = include_bytes!("atlas.png");
         let diffuse_texture = Texture::new(&device, &queue, diffuse_bytes);
         let (texture_bind_group_layout, texture_bind_group) =
             diffuse_texture.create_bind_group(&device);
@@ -143,9 +143,9 @@ impl Renderer {
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 0.1,
-                        g: 0.2,
-                        b: 0.3,
+                        r: 232.0/255.0,
+                        g: 220.0/255.0,
+                        b: 184.0/255.0,
                         a: 1.0,
                     }),
                     store: true,

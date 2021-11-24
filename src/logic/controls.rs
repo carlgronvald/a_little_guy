@@ -30,6 +30,8 @@ pub struct ControlConfig {
     pub player_interact_1: Control,
     #[serde(default = "player_interact_2_default")]
     pub player_interact_2: Control,
+    #[serde(default = "shoot_right_default")]
+    pub shoot_right: Control,
 }
 
 impl Default for ControlConfig {
@@ -44,6 +46,7 @@ impl Default for ControlConfig {
             load: load_default(),
             player_interact_1: player_interact_1_default(),
             player_interact_2: player_interact_2_default(),
+            shoot_right : shoot_right_default()
         }
     }
 }
@@ -96,6 +99,11 @@ fn player_interact_1_default() -> Control {
 fn player_interact_2_default() -> Control {
     Control::Mouse {
         mouse_button: MouseButton::Right,
+    }
+}
+fn shoot_right_default() -> Control {
+    Control::Keyboard {
+        key_code : VirtualKeyCode::Right
     }
 }
 

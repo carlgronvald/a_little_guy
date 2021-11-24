@@ -1,6 +1,6 @@
 use wgpu::{Device, Queue};
 
-use crate::logic::Position;
+use crate::logic::{Asset, Position};
 
 use super::{
     uniforms::{DefaultUniforms, Uniform},
@@ -13,14 +13,14 @@ use super::{
 /// Contains all the business logic to convert that data to rendering (for now)
 ///
 pub struct DrawState {
-    positions: Vec<Position>,
+    entities: Vec<(Asset, Position)>,
     camera_offset: [f32; 2],
 }
 
 impl DrawState {
-    pub fn new(positions: Vec<Position>, camera_offset: [f32; 2]) -> Self {
+    pub fn new(entities: Vec<(Asset, Position)>, camera_offset: [f32; 2]) -> Self {
         Self {
-            positions,
+            entities,
             camera_offset,
         }
     }
@@ -33,31 +33,37 @@ impl DrawState {
     ) -> VertexArray {
         uniforms.update_uniform(|x| x.camera_offset = self.camera_offset, queue);
         let vertices: Vec<Vertex> = self
-            .positions
+            .entities
             .iter()
-            .flat_map(|pos| {
+            .flat_map(|(asset, pos)| {
+                let (min_u, min_v, max_u, max_v) = match &asset.name[..] {
+                    "player" => (0.0, 0.0, 0.25, 0.25),
+                    "bush" => (0.25, 0.0, 0.5, 0.25),
+                    _ => (0.0,0.0,1.0,1.0),
+                };
+
                 [
                     Vertex {
                         position: [pos.x, pos.y, 0.0],
-                        tex_coords: [0.0, 1.0],
+                        tex_coords: [min_u, max_v],
                     },
                     Vertex {
                         position: [pos.x + 64.0, pos.y, 0.0],
-                        tex_coords: [1.0, 1.0],
+                        tex_coords: [max_u, max_v],
                     },
                     Vertex {
                         position: [pos.x + 64.0, pos.y + 64.0, 0.0],
-                        tex_coords: [1.0, 0.0],
+                        tex_coords: [max_u, min_v],
                     },
                     Vertex {
                         position: [pos.x, pos.y + 64.0, 0.0],
-                        tex_coords: [0.0, 0.0],
+                        tex_coords: [min_u, min_v],
                     },
                 ]
             })
             .collect();
         let indices: Vec<u16> = self
-            .positions
+            .entities
             .iter()
             .enumerate()
             .flat_map(|(i, _)| {

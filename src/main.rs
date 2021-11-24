@@ -15,7 +15,7 @@ fn main() {
         channel_receiver: game_event_receiver,
     };
 
-    let (graphics_sender, graphics_receiver) = mpsc::sync_channel(1);
+    let (graphics_sender, graphics_receiver) = mpsc::sync_channel(2);
     let logic_to_window_sender = channels::LogicToWindowSender {
         render_pack: graphics_sender,
     };

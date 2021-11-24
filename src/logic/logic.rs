@@ -23,8 +23,15 @@ pub fn setup_world() -> (World, Entity) {
         Position { x: 0.0, y: 0.0 },
         Velocity { dx: 0.02, dy: 0.0 },
         Player {},
-        Asset {},
+        Asset { name : "player".into() },
     ));
+
+    world.push( // A bush
+        (
+            Position { x: 100.0, y: 100.0},
+            Asset { name : "bush".into() }
+        )
+    );
 
     let mut query = <&Position>::query();
 
@@ -114,14 +121,15 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                             velocity.dy += delta.y * extra_info.speed;
                         }
                         super::state_input_event::StateInputEvent::Jump => extra_info.shake += 5.0,
+                        super::state_input_event::StateInputEvent::Charge(_) => {
+                            extra_info.speed = 2.0;
+                        }
+                        super::state_input_event::StateInputEvent::Shoot(_) => {
+                            extra_info.speed = 16.0;
+                        }
                         _ => {}
                     }
                 }
-
-                println!(
-                    "Player Position: {:?}",
-                    player_entry.get_component::<Position>().unwrap()
-                );
             } else {
                 panic!("The player has disappeared!");
             }
@@ -132,9 +140,9 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
             //TODO: COLLISION
 
-            let draw_positions: Vec<Position> = drawing_query
+            let draw_positions: Vec<(Asset, Position)> = drawing_query
                 .iter(&world)
-                .map(|(asset, position)| *position)
+                .map(|(asset, position)| (asset.clone(), *position))
                 .collect();
             let _ = graphics_sender.send(DrawState::new(
                 draw_positions,
