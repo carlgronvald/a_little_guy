@@ -117,6 +117,15 @@ impl ExternalEventHandler {
         if control == self.control_config.shoot_right {
             self.tick_state_events.push(StateInputEvent::Shoot(Direction::Right));
         }
+        if control == self.control_config.shoot_up {
+            self.tick_state_events.push(StateInputEvent::Shoot(Direction::Up));
+        }
+        if control == self.control_config.shoot_left {
+            self.tick_state_events.push(StateInputEvent::Shoot(Direction::Left));
+        }
+        if control == self.control_config.shoot_down {
+            self.tick_state_events.push(StateInputEvent::Shoot(Direction::Down));
+        }
     }
 
     /// Returns and clears the current event buffer.
@@ -138,10 +147,19 @@ impl ExternalEventHandler {
         if move_vector != Vec2::new(0., 0.) {
             state_result.push(StateInputEvent::MovePlayerRelative { delta: move_vector });
         }
-        
+
         let mut shoot_direction = None;
         if self.control_state(self.control_config.shoot_right) {
             shoot_direction = Some(Direction::Right);
+        }
+        if self.control_state(self.control_config.shoot_up) {
+            shoot_direction = Some(Direction::Up);
+        }
+        if self.control_state(self.control_config.shoot_left) {
+            shoot_direction = Some(Direction::Left);
+        }
+        if self.control_state(self.control_config.shoot_down) {
+            shoot_direction = Some(Direction::Down);
         }
         if let Some(shoot_direction) = shoot_direction {
             state_result.push(StateInputEvent::Charge(shoot_direction));

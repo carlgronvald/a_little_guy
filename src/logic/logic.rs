@@ -1,16 +1,14 @@
 use std::thread::{self, JoinHandle};
 
+use glm::Vec2;
 use legion::*;
 use rand::Rng;
 
 use super::{
     controls, external_event_handler, update_positions_system, update_velocities_system, Asset,
-    Player, Position, Time, Velocity,
+    Position, Time, Velocity,
 };
-use crate::{
-    channels::{LogicToWindowSender, WindowToLogicReceiver},
-    graphics::DrawState,
-};
+use crate::{channels::{LogicToWindowSender, WindowToLogicReceiver}, graphics::DrawState, logic::TimedLife};
 
 use std::time::SystemTime;
 
@@ -22,7 +20,6 @@ pub fn setup_world() -> (World, Entity) {
     let player = world.push((
         Position { x: 0.0, y: 0.0 },
         Velocity { dx: 0.02, dy: 0.0 },
-        Player {},
         Asset { name : "player".into() },
     ));
 
@@ -65,12 +62,14 @@ pub fn step(world: &mut World, schedule: &mut Schedule, resources: &mut Resource
     schedule.execute(world, resources)
 }
 
+#[derive(Default)]
 ///
 /// TODO: BAD NAME
 /// All the stuff around the player, like if they're looking somewhere or if the camera's shaking or whatever.
 struct ExtraInfo {
     shake: f32,
     speed: f32,
+    charge : u32,
 }
 
 impl ExtraInfo {
@@ -78,6 +77,7 @@ impl ExtraInfo {
         Self {
             shake: 0.0,
             speed: 16.0,
+            .. Default::default()
         }
     }
     pub fn update(&mut self) {
@@ -103,6 +103,7 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let mut rng = rand::thread_rng();
 
+
         loop {
             let start_time = SystemTime::now();
 
@@ -112,37 +113,60 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             // -----------------------------
             //      Handling user input
             // -----------------------------
-            if let Some(mut player_entry) = world.entry(player) {
-                for event in events {
-                    match event {
-                        super::state_input_event::StateInputEvent::MovePlayerRelative { delta } => {
-                            let velocity = player_entry.get_component_mut::<Velocity>().unwrap();
-                            velocity.dx += delta.x * extra_info.speed;
-                            velocity.dy += delta.y * extra_info.speed;
-                        }
-                        super::state_input_event::StateInputEvent::Jump => extra_info.shake += 5.0,
-                        super::state_input_event::StateInputEvent::Charge(_) => {
-                            extra_info.speed = 2.0;
-                        }
-                        super::state_input_event::StateInputEvent::Shoot(_) => {
-                            extra_info.speed = 16.0;
-                        }
-                        _ => {}
-                    }
-                }
+
+            let (mut velocity, mut position) = if let Some(player_entry) = world.entry(player) {
+                (*player_entry.get_component::<Velocity>().unwrap(), *player_entry.get_component::<Position>().unwrap())
             } else {
                 panic!("The player has disappeared!");
+            };
+
+            for event in events {
+                match event {
+                    super::state_input_event::StateInputEvent::MovePlayerRelative { delta } => {
+                        velocity.dx += delta.x * extra_info.speed;
+                        velocity.dy += delta.y * extra_info.speed;
+                    }
+                    super::state_input_event::StateInputEvent::Jump => extra_info.shake += 5.0,
+                    super::state_input_event::StateInputEvent::Charge(_) => {
+                        extra_info.speed = 2.0;
+                        extra_info.charge += 1;
+                    }
+                    super::state_input_event::StateInputEvent::Shoot(direction) => {
+                        extra_info.speed = 16.0;
+                        world.push((
+                            Asset { name: format!("arrow_{}", direction.lowercase()) },
+                            position,
+                            Velocity::from(Vec2::from(direction) * (32.0 * (extra_info.charge as f32))),
+                            TimedLife {
+                                seconds_left : 1.0
+                            }
+                        ));
+                        extra_info.charge = 0;
+                    }
+                    _ => {}
+                }
             }
+
+            if let Some(mut player_entry) = world.entry(player) {
+                *player_entry.get_component_mut::<Velocity>().unwrap() = velocity;
+                *player_entry.get_component_mut::<Position>().unwrap() = position;
+            } else {
+                panic!("The player has disappeared!");
+            };
 
             // Do world step
             step(&mut world, &mut schedule, &mut resources);
+
+            let q = <(&TimedLife,)>::query();
+            q.iter_entities(&mut world)
+
             extra_info.update();
 
             //TODO: COLLISION
 
             let draw_positions: Vec<(Asset, Position)> = drawing_query
                 .iter(&world)
-                .map(|(asset, position)| (asset.clone(), *position))
+                .map(|(asset, position)| (asset.clone(), Position { x : position.x.floor(), y : position.y.floor()}) )
                 .collect();
             let _ = graphics_sender.send(DrawState::new(
                 draw_positions,

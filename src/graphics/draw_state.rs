@@ -39,6 +39,10 @@ impl DrawState {
                 let (min_u, min_v, max_u, max_v) = match &asset.name[..] {
                     "player" => (0.0, 0.0, 0.25, 0.25),
                     "bush" => (0.25, 0.0, 0.5, 0.25),
+                    "arrow_right" => (0.0, 0.25, 0.25, 0.5),
+                    "arrow_up" => (0.25, 0.25, 0.5, 0.5),
+                    "arrow_left" => (0.5, 0.25, 0.75, 0.5),
+                    "arrow_down" => (0.75, 0.25, 1.0, 0.5),
                     _ => (0.0,0.0,1.0,1.0),
                 };
 
