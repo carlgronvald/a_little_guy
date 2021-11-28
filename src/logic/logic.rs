@@ -157,8 +157,12 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             // Do world step
             step(&mut world, &mut schedule, &mut resources);
 
-            let q = <(&TimedLife,)>::query();
-            q.iter_entities(&mut world)
+            let mut q = <(Entity, &TimedLife,)>::query();
+            let removed_entities : Vec<Entity> = q.iter(&world).flat_map( |(entity, time)| if time.seconds_left <= 0.0 { Some(*entity)} else { None}).collect();
+
+            for entity in removed_entities {
+                world.remove(entity);
+            }
 
             extra_info.update();
 
