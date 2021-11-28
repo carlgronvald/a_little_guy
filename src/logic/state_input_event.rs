@@ -16,8 +16,8 @@ pub enum StateInputEvent {
         delta: Vec2,
     },
     Jump,
-    Shoot (Direction),
-    Charge (Direction)
+    Shoot(Direction),
+    Charge(Direction),
 }
 /*
 /// Represents the entire history of input events.

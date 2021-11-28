@@ -1,6 +1,6 @@
-use super::Direction;
 use super::controls::{Control, ControlConfig};
 use super::state_input_event::StateInputEvent;
+use super::Direction;
 use crate::graphics::ExternalEvent;
 use glm::Vec2;
 use std::{collections::HashMap, sync::mpsc};
@@ -43,7 +43,6 @@ impl ExternalEventHandler {
         }
     }
 
-    
     /// Empties the channel of new events and handles them.
     pub fn handle_inputs(
         &mut self,
@@ -61,7 +60,7 @@ impl ExternalEventHandler {
     /// Handles the ExternalEvent by turning it into the right StateInputEvents.
     fn handle_event(&mut self, event: ExternalEvent) {
         match event {
-            ExternalEvent::MouseMotion { delta : _ } => { }
+            ExternalEvent::MouseMotion { delta: _ } => {}
             ExternalEvent::KeyboardInput { key_code, state } => {
                 if !self.key_state(key_code) {
                     let control = Control::Keyboard { key_code };
@@ -98,18 +97,22 @@ impl ExternalEventHandler {
         }
     }
 
-    fn handle_control_release(&mut self, control : Control) {
+    fn handle_control_release(&mut self, control: Control) {
         if control == self.control_config.shoot_right {
-            self.tick_state_events.push(StateInputEvent::Shoot(Direction::Right));
+            self.tick_state_events
+                .push(StateInputEvent::Shoot(Direction::Right));
         }
         if control == self.control_config.shoot_up {
-            self.tick_state_events.push(StateInputEvent::Shoot(Direction::Up));
+            self.tick_state_events
+                .push(StateInputEvent::Shoot(Direction::Up));
         }
         if control == self.control_config.shoot_left {
-            self.tick_state_events.push(StateInputEvent::Shoot(Direction::Left));
+            self.tick_state_events
+                .push(StateInputEvent::Shoot(Direction::Left));
         }
         if control == self.control_config.shoot_down {
-            self.tick_state_events.push(StateInputEvent::Shoot(Direction::Down));
+            self.tick_state_events
+                .push(StateInputEvent::Shoot(Direction::Down));
         }
     }
 

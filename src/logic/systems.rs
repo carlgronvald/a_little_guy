@@ -1,4 +1,4 @@
-use super::{Position, Time, TimedLife, Velocity, Friction};
+use super::{Friction, Position, Time, TimedLife, Velocity};
 use legion::system;
 
 #[system(for_each)]
@@ -9,7 +9,7 @@ pub fn update_positions(pos: &mut Position, vel: &Velocity, #[resource] time: &T
 }
 
 #[system(for_each)]
-pub fn update_velocities(vel: &mut Velocity, _friction : &Friction, #[resource] time: &Time) {
+pub fn update_velocities(vel: &mut Velocity, _friction: &Friction, #[resource] time: &Time) {
     vel.dx *= 0.1f32.powf(time.elapsed_seconds);
     vel.dy *= 0.1f32.powf(time.elapsed_seconds);
 }

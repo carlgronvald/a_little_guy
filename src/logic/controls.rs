@@ -50,10 +50,10 @@ impl Default for ControlConfig {
             load: load_default(),
             player_interact_1: player_interact_1_default(),
             player_interact_2: player_interact_2_default(),
-            shoot_right : shoot_right_default(),
-            shoot_up : shoot_up_default(),
-            shoot_left : shoot_left_default(),
-            shoot_down : shoot_down_default()
+            shoot_right: shoot_right_default(),
+            shoot_up: shoot_up_default(),
+            shoot_left: shoot_left_default(),
+            shoot_down: shoot_down_default(),
         }
     }
 }
@@ -110,21 +110,21 @@ fn player_interact_2_default() -> Control {
 }
 fn shoot_right_default() -> Control {
     Control::Keyboard {
-        key_code : VirtualKeyCode::Right
+        key_code: VirtualKeyCode::Right,
     }
 }
 fn shoot_up_default() -> Control {
     Control::Keyboard {
-        key_code : VirtualKeyCode::Up
+        key_code: VirtualKeyCode::Up,
     }
 }
 fn shoot_left_default() -> Control {
     Control::Keyboard {
-        key_code : VirtualKeyCode::Left
+        key_code: VirtualKeyCode::Left,
     }
 }
 fn shoot_down_default() -> Control {
     Control::Keyboard {
-        key_code : VirtualKeyCode::Down
+        key_code: VirtualKeyCode::Down,
     }
 }

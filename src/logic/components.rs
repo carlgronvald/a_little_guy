@@ -12,7 +12,7 @@ pub struct Position {
 
 impl From<Vec2> for Position {
     fn from(vec: Vec2) -> Self {
-        Self { x : vec.x, y : vec.y}
+        Self { x: vec.x, y: vec.y }
     }
 }
 
@@ -23,19 +23,22 @@ pub struct Velocity {
 }
 impl From<Vec2> for Velocity {
     fn from(vec: Vec2) -> Self {
-        Self { dx : vec.x, dy : vec.y}
+        Self {
+            dx: vec.x,
+            dy: vec.y,
+        }
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Asset {
-    pub name : String
+    pub name: String,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TimedLife {
-    pub seconds_left : f32,
+    pub seconds_left: f32,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Friction { }
+pub struct Friction {}

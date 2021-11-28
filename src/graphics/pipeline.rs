@@ -59,7 +59,6 @@ impl Pipeline {
             },
         });
 
-
         Self {
             render_pipeline,
             bind_groups,

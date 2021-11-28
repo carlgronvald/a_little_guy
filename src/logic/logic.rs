@@ -8,7 +8,11 @@ use super::{
     controls, external_event_handler, update_positions_system, update_velocities_system, Asset,
     Position, Time, Velocity,
 };
-use crate::{channels::{LogicToWindowSender, WindowToLogicReceiver}, graphics::DrawState, logic::TimedLife};
+use crate::{
+    channels::{LogicToWindowSender, WindowToLogicReceiver},
+    graphics::DrawState,
+    logic::TimedLife,
+};
 
 use super::state_input_event::*;
 
@@ -22,14 +26,19 @@ pub fn setup_world() -> (World, Entity) {
     let player = world.push((
         Position { x: 0.0, y: 0.0 },
         Velocity { dx: 0.02, dy: 0.0 },
-        Asset { name : "player".into() },
+        Asset {
+            name: "player".into(),
+        },
     ));
 
-    world.push( // A bush
+    world.push(
+        // A bush
         (
-            Position { x: 100.0, y: 100.0},
-            Asset { name : "bush".into() }
-        )
+            Position { x: 100.0, y: 100.0 },
+            Asset {
+                name: "bush".into(),
+            },
+        ),
     );
 
     let mut query = <&Position>::query();
@@ -71,7 +80,7 @@ pub fn step(world: &mut World, schedule: &mut Schedule, resources: &mut Resource
 struct ExtraInfo {
     shake: f32,
     speed: f32,
-    charge : u32,
+    charge: u32,
 }
 
 impl ExtraInfo {
@@ -79,7 +88,7 @@ impl ExtraInfo {
         Self {
             shake: 0.0,
             speed: 16.0,
-            .. Default::default()
+            ..Default::default()
         }
     }
     pub fn update(&mut self) {
@@ -105,7 +114,6 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let mut rng = rand::thread_rng();
 
-
         loop {
             let start_time = SystemTime::now();
 
@@ -117,7 +125,10 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             // -----------------------------
 
             let (mut velocity, position) = if let Some(player_entry) = world.entry(player) {
-                (*player_entry.get_component::<Velocity>().unwrap(), *player_entry.get_component::<Position>().unwrap())
+                (
+                    *player_entry.get_component::<Velocity>().unwrap(),
+                    *player_entry.get_component::<Position>().unwrap(),
+                )
             } else {
                 panic!("The player has disappeared!");
             };
@@ -136,12 +147,14 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                     StateInputEvent::Shoot(direction) => {
                         extra_info.speed = 16.0;
                         world.push((
-                            Asset { name: format!("arrow_{}", direction.lowercase()) },
+                            Asset {
+                                name: format!("arrow_{}", direction.lowercase()),
+                            },
                             position,
-                            Velocity::from(Vec2::from(direction) * (32.0 * (extra_info.charge as f32))),
-                            TimedLife {
-                                seconds_left : 1.0
-                            }
+                            Velocity::from(
+                                Vec2::from(direction) * (32.0 * (extra_info.charge as f32)),
+                            ),
+                            TimedLife { seconds_left: 1.0 },
                         ));
                         extra_info.charge = 0;
                     }
@@ -155,15 +168,23 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                 panic!("The player has disappeared!");
             };
 
-
             // Do world step
             step(&mut world, &mut schedule, &mut resources);
 
-            let mut q = <(Entity, &TimedLife,)>::query();
-            let removed_entities : Vec<Entity> = q.iter(&world).flat_map( |(entity, time)| if time.seconds_left <= 0.0 { Some(*entity)} else { None}).collect();
+            let mut q = <(Entity, &TimedLife)>::query();
+            let removed_entities: Vec<Entity> = q
+                .iter(&world)
+                .flat_map(|(entity, time)| {
+                    if time.seconds_left <= 0.0 {
+                        Some(*entity)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
 
             for entity in removed_entities {
-                world.remove(entity);           
+                world.remove(entity);
             }
 
             extra_info.update();
@@ -172,7 +193,15 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
             let draw_positions: Vec<(Asset, Position)> = drawing_query
                 .iter(&world)
-                .map(|(asset, position)| (asset.clone(), Position { x : position.x.floor(), y : position.y.floor()}) )
+                .map(|(asset, position)| {
+                    (
+                        asset.clone(),
+                        Position {
+                            x: position.x.floor(),
+                            y: position.y.floor(),
+                        },
+                    )
+                })
                 .collect();
             let _ = graphics_sender.send(DrawState::new(
                 draw_positions,
