@@ -1,5 +1,5 @@
 mod components;
-pub use components::{Asset, Position, Velocity, TimedLife};
+pub use components::*;
 
 mod resources;
 use glm::Vec2;

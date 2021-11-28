@@ -10,6 +10,8 @@ use super::{
 };
 use crate::{channels::{LogicToWindowSender, WindowToLogicReceiver}, graphics::DrawState, logic::TimedLife};
 
+use super::state_input_event::*;
+
 use std::time::SystemTime;
 
 pub fn setup_world() -> (World, Entity) {
@@ -114,7 +116,7 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             //      Handling user input
             // -----------------------------
 
-            let (mut velocity, mut position) = if let Some(player_entry) = world.entry(player) {
+            let (mut velocity, position) = if let Some(player_entry) = world.entry(player) {
                 (*player_entry.get_component::<Velocity>().unwrap(), *player_entry.get_component::<Position>().unwrap())
             } else {
                 panic!("The player has disappeared!");
@@ -122,16 +124,16 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
             for event in events {
                 match event {
-                    super::state_input_event::StateInputEvent::MovePlayerRelative { delta } => {
+                    StateInputEvent::MovePlayerRelative { delta } => {
                         velocity.dx += delta.x * extra_info.speed;
                         velocity.dy += delta.y * extra_info.speed;
                     }
-                    super::state_input_event::StateInputEvent::Jump => extra_info.shake += 5.0,
-                    super::state_input_event::StateInputEvent::Charge(_) => {
+                    StateInputEvent::Jump => extra_info.shake += 5.0,
+                    StateInputEvent::Charge(_) => {
                         extra_info.speed = 2.0;
                         extra_info.charge += 1;
                     }
-                    super::state_input_event::StateInputEvent::Shoot(direction) => {
+                    StateInputEvent::Shoot(direction) => {
                         extra_info.speed = 16.0;
                         world.push((
                             Asset { name: format!("arrow_{}", direction.lowercase()) },
@@ -143,7 +145,6 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                         ));
                         extra_info.charge = 0;
                     }
-                    _ => {}
                 }
             }
 
@@ -154,6 +155,7 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                 panic!("The player has disappeared!");
             };
 
+
             // Do world step
             step(&mut world, &mut schedule, &mut resources);
 
@@ -161,7 +163,7 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             let removed_entities : Vec<Entity> = q.iter(&world).flat_map( |(entity, time)| if time.seconds_left <= 0.0 { Some(*entity)} else { None}).collect();
 
             for entity in removed_entities {
-                world.remove(entity);
+                world.remove(entity);           
             }
 
             extra_info.update();

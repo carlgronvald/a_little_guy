@@ -1,5 +1,3 @@
-use std::{fs, path::Path};
-
 use serde::{Deserialize, Serialize};
 use winit::event::{MouseButton, VirtualKeyCode};
 
@@ -128,50 +126,5 @@ fn shoot_left_default() -> Control {
 fn shoot_down_default() -> Control {
     Control::Keyboard {
         key_code : VirtualKeyCode::Down
-    }
-}
-
-pub fn save_control_config<P>(path: P, control_config: &ControlConfig)
-where
-    P: AsRef<Path>,
-{
-    let path = path.as_ref();
-    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-
-    let config_string = match toml::to_string(&control_config) {
-        Ok(config_string) => config_string,
-        Err(error) => {
-            println!("Could not serialize controls config. Error: {:?}", error);
-            return;
-        }
-    };
-
-    if let Err(error) = fs::write(path, &config_string) {
-        println!(
-            "Could not write controls config to file. Error: {:?}",
-            error
-        )
-    }
-}
-
-pub fn load_control_config<P>(path: P) -> ControlConfig
-where
-    P: AsRef<Path>,
-{
-    match fs::read_to_string(path) {
-        Ok(config_string) => toml::from_str(&config_string).unwrap_or_else(|error| {
-            println!(
-                "Could not parse control configs. Using default. Error: {:?}",
-                error
-            );
-            ControlConfig::default()
-        }),
-        Err(error) => {
-            println!(
-                "Could not read control config file. Using default. Error: {:?}",
-                error
-            );
-            ControlConfig::default()
-        }
     }
 }

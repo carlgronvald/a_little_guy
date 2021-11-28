@@ -36,3 +36,6 @@ pub struct Asset {
 pub struct TimedLife {
     pub seconds_left : f32,
 }
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Friction { }

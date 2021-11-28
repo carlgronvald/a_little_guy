@@ -8,7 +8,6 @@ use super::Vertex;
 pub struct VertexArray {
     vertex_buffer: Buffer,
     index_buffer: Buffer,
-    vertex_count: usize,
     index_count: usize,
 }
 
@@ -29,7 +28,6 @@ impl VertexArray {
         Self {
             vertex_buffer,
             index_buffer,
-            vertex_count: vertices.len(),
             index_count: indices.len(),
         }
     }

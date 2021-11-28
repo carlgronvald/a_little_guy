@@ -43,10 +43,7 @@ impl ExternalEventHandler {
         }
     }
 
-    pub fn replace_control_config(&mut self, control_config: ControlConfig) {
-        self.control_config = control_config
-    }
-
+    
     /// Empties the channel of new events and handles them.
     pub fn handle_inputs(
         &mut self,
@@ -64,11 +61,7 @@ impl ExternalEventHandler {
     /// Handles the ExternalEvent by turning it into the right StateInputEvents.
     fn handle_event(&mut self, event: ExternalEvent) {
         match event {
-            ExternalEvent::MouseMotion { delta } => {
-                self.tick_state_events.push(StateInputEvent::RotateView {
-                    delta: (0.003 * delta.0 as f32, 0.003 * delta.1 as f32),
-                })
-            }
+            ExternalEvent::MouseMotion { delta : _ } => { }
             ExternalEvent::KeyboardInput { key_code, state } => {
                 if !self.key_state(key_code) {
                     let control = Control::Keyboard { key_code };
@@ -102,14 +95,6 @@ impl ExternalEventHandler {
     fn handle_control_press(&mut self, control: Control) {
         if control == self.control_config.jump {
             self.tick_state_events.push(StateInputEvent::Jump)
-        }
-        if control == self.control_config.player_interact_1 {
-            self.tick_state_events
-                .push(StateInputEvent::PlayerInteract1);
-        }
-        if control == self.control_config.player_interact_2 {
-            self.tick_state_events
-                .push(StateInputEvent::PlayerInteract2);
         }
     }
 
