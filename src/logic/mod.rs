@@ -6,7 +6,7 @@ use glm::Vec2;
 pub use resources::Time;
 
 mod systems;
-pub use systems::{update_positions_system, update_velocities_system};
+pub use systems::{update_lives_system, update_positions_system, update_velocities_system};
 
 mod controls;
 mod external_event_handler;

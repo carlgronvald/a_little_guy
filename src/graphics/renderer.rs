@@ -1,9 +1,14 @@
-use wgpu::{Device, Queue, Surface, SurfaceConfiguration};
+use std::collections::HashMap;
+
+use wgpu::{BindGroup, Device, Queue, Surface, SurfaceConfiguration};
 use winit::dpi::PhysicalSize;
 
+use crate::graphics::model::Animation;
+
 use super::{
+    model::Model,
     pipeline::Pipeline,
-    texture::Texture,
+    texture::{Texture, TextureIdentifier},
     uniforms::{DefaultUniforms, Uniform},
     DrawState,
 };
@@ -17,9 +22,12 @@ pub struct Renderer {
     queue: Queue,
     config: SurfaceConfiguration,
     size: PhysicalSize<u32>,
+
     pipeline: Pipeline,
-    diffuse_texture: Texture,
     default_uniforms: Uniform<DefaultUniforms>,
+
+    models: HashMap<String, Model>,
+    textures: HashMap<TextureIdentifier, Texture>,
 }
 
 impl Renderer {
@@ -65,10 +73,7 @@ impl Renderer {
         };
         surface.configure(&device, &config);
 
-        let diffuse_bytes = include_bytes!("atlas.png");
-        let diffuse_texture = Texture::new(&device, &queue, diffuse_bytes);
-        let (texture_bind_group_layout, texture_bind_group) =
-            diffuse_texture.create_bind_group(&device);
+        let textures = Self::load_textures(&device, &queue);
 
         let default_uniforms = Uniform::new(
             &device,
@@ -78,22 +83,28 @@ impl Renderer {
                 [0.0, 0.0],
             ),
         );
-        let (default_bind_group_layout, default_bind_group) =
-            default_uniforms.create_bind_group(&device);
 
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
         });
 
+        let texture_bind_group_layout = Texture::create_bind_group_layout(&device);
+        let uniform_bind_group_layout =
+            Uniform::<DefaultUniforms>::create_bind_group_layout(&device);
         // Create our main pipeline
-        let pipeline = Pipeline::new(
+        let mut pipeline = Pipeline::new(
             &device,
             &shader,
             &config,
-            &[&texture_bind_group_layout, &default_bind_group_layout],
-            vec![texture_bind_group, default_bind_group],
+            vec![texture_bind_group_layout, uniform_bind_group_layout],
         );
+        for (name, texture) in textures.iter() {
+            pipeline.create_texture_bind_group(&device, texture, name);
+        }
+        pipeline.set_uniform_bind_group(&device, &default_uniforms);
+
+        let models = Self::load_models();
 
         println!("Returning renderer");
         Self {
@@ -103,9 +114,62 @@ impl Renderer {
             config,
             size,
             pipeline,
-            diffuse_texture,
+
             default_uniforms,
+
+            textures,
+            models,
         }
+    }
+
+    fn load_models() -> HashMap<String, Model> {
+        let mut models = HashMap::new();
+
+        let player_model = Model::new(
+            "atlas".into(),
+            8,
+            192.0,
+            vec![Animation::new(vec![0], 1.0)],
+        );
+        models.insert("player".into(), player_model);
+
+        let bush_model = Model::new("atlas".into(), 8, 192.0, vec![Animation::new(vec![1], 1.0)]);
+        models.insert("bush".into(), bush_model);
+
+        let arrow_model = Model::new(
+            "atlas".into(),
+            8,
+            192.0,
+            vec![Animation::new(vec![8, 9, 10, 11], 0.125)],
+        );
+        models.insert("arrow".into(), arrow_model);
+
+        let player_model = Model::new(
+            "background".into(),
+            1,
+            2400.0,
+            vec![Animation::new(vec![0], 1.0)],
+        );
+        models.insert("background".into(), player_model);
+
+        models
+    }
+
+    fn load_textures(device: &Device, queue: &Queue) -> HashMap<TextureIdentifier, Texture> {
+        let atlas_bytes = include_bytes!("atlas.png");
+        let atlas_texture = Texture::new(&device, &queue, atlas_bytes);
+
+        let background_bytes = include_bytes!("background.png");
+        let background_texture = Texture::new(&device, &queue, background_bytes);
+
+        let mut textures = HashMap::new();
+        textures.insert(TextureIdentifier::new("atlas".into()), atlas_texture);
+        textures.insert(
+            TextureIdentifier::new("background".into()),
+            background_texture,
+        );
+
+        textures
     }
 
     ///
@@ -136,6 +200,13 @@ impl Renderer {
                 label: Some("Render Encoder"),
             });
 
+        let mut draw_packages = draw_state.render(
+            &self.device,
+            &self.queue,
+            self.default_uniforms.uniform_struct(),
+            &self.models,
+        );
+
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
             color_attachments: &[wgpu::RenderPassColorAttachment {
@@ -154,11 +225,17 @@ impl Renderer {
             depth_stencil_attachment: None,
         });
 
-        let vertex_array = draw_state.render(&self.device, &self.queue, &mut self.default_uniforms);
-
-        //self.default_uniforms.update_uniform(|x| { x.x_scale *= 0.99}, &self.queue);
         self.pipeline.set(&mut render_pass);
-        vertex_array.draw(render_pass);
+
+        for draw_package in draw_packages.iter_mut() {
+            self.default_uniforms
+                .update_uniform(|x| *x = draw_package.uniforms, &self.queue);
+            self.pipeline
+                .bind_uniforms(&mut render_pass, &draw_package.texture);
+
+            draw_package.vertex_array.draw(&mut render_pass);
+        }
+        drop(render_pass);
 
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();

@@ -5,8 +5,8 @@ use legion::*;
 use rand::Rng;
 
 use super::{
-    controls, external_event_handler, update_positions_system, update_velocities_system, Asset,
-    Position, Time, Velocity,
+    controls, external_event_handler, update_lives_system, update_positions_system,
+    update_velocities_system, Asset, Friction, Position, Time, Velocity,
 };
 use crate::{
     channels::{LogicToWindowSender, WindowToLogicReceiver},
@@ -24,12 +24,30 @@ pub fn setup_world() -> (World, Entity) {
     let mut world = World::default();
 
     let player = world.push((
-        Position { x: 0.0, y: 0.0 },
-        Velocity { dx: 0.02, dy: 0.0 },
+        Position {
+            x: 445.0 * 3.0,
+            y: 407.0 * 3.0,
+        },
+        Velocity { dx: 0.0, dy: 0.0 },
         Asset {
             name: "player".into(),
+            animation: 0,
+            animation_start_time: 0.0,
         },
+        Friction {},
     ));
+
+    world.push(
+        // The background
+        (
+            Position { x: 0.0, y: 0.0 },
+            Asset {
+                name: "background".into(),
+                animation: 0,
+                animation_start_time: 0.0,
+            },
+        ),
+    );
 
     world.push(
         // A bush
@@ -37,15 +55,12 @@ pub fn setup_world() -> (World, Entity) {
             Position { x: 100.0, y: 100.0 },
             Asset {
                 name: "bush".into(),
+                animation: 0,
+                animation_start_time: 0.0,
             },
+            Friction {},
         ),
     );
-
-    let mut query = <&Position>::query();
-
-    for position in query.iter(&world) {
-        println!("{:?}", position)
-    }
 
     (world, player)
 }
@@ -54,6 +69,7 @@ pub fn setup_schedule() -> Schedule {
     Schedule::builder()
         .add_system(update_positions_system())
         .add_system(update_velocities_system())
+        .add_system(update_lives_system())
         .build()
 }
 
@@ -114,6 +130,8 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let mut rng = rand::thread_rng();
 
+        let first_time = SystemTime::now();
+
         loop {
             let start_time = SystemTime::now();
 
@@ -142,20 +160,29 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                     StateInputEvent::Jump => extra_info.shake += 5.0,
                     StateInputEvent::Charge(_) => {
                         extra_info.speed = 2.0;
-                        extra_info.charge += 1;
+                        if extra_info.charge < 30 {
+                            extra_info.charge += 1;
+                        }
                     }
                     StateInputEvent::Shoot(direction) => {
                         extra_info.speed = 16.0;
-                        world.push((
-                            Asset {
-                                name: format!("arrow_{}", direction.lowercase()),
-                            },
-                            position,
-                            Velocity::from(
-                                Vec2::from(direction) * (32.0 * (extra_info.charge as f32)),
-                            ),
-                            TimedLife { seconds_left: 1.0 },
-                        ));
+                        if extra_info.charge > 10 {
+                            world.push((
+                                Asset {
+                                    name: "arrow".into(),
+                                    animation: 0,
+                                    animation_start_time: first_time
+                                        .elapsed()
+                                        .unwrap()
+                                        .as_secs_f32(),
+                                },
+                                position,
+                                Velocity::from(
+                                    Vec2::from(direction) * (32.0 * (extra_info.charge as f32)),
+                                ),
+                                TimedLife { seconds_left: 1.0 },
+                            ));
+                        }
                         extra_info.charge = 0;
                     }
                 }
@@ -206,9 +233,10 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             let _ = graphics_sender.send(DrawState::new(
                 draw_positions,
                 [
-                    rng.gen_range(-1.0..1.0) * extra_info.shake,
-                    rng.gen_range(-1.0..1.0) * extra_info.shake,
+                    rng.gen_range(-1.0..1.0) * extra_info.shake - position.x + 416.0,
+                    rng.gen_range(-1.0..1.0) * extra_info.shake - position.y + 290.0,
                 ],
+                first_time.elapsed().unwrap().as_secs_f32(),
             ));
 
             let end_time = SystemTime::now();

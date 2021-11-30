@@ -1,8 +1,25 @@
+use std::collections::HashMap;
+
 use wgpu::{BindGroup, BindGroupLayout, Device, Queue, Sampler, TextureView};
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TextureIdentifier {
+    pub name: String,
+}
+
+impl TextureIdentifier {
+    pub fn new(name: String) -> Self {
+        Self { name }
+    }
+}
 
 pub struct Texture {
     view: TextureView,
     sampler: Sampler,
+}
+
+pub struct TextureManager {
+    textures: HashMap<TextureIdentifier, Texture>,
 }
 
 impl Texture {
@@ -50,7 +67,7 @@ impl Texture {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
+            mag_filter: wgpu::FilterMode::Nearest,
             min_filter: wgpu::FilterMode::Nearest,
             mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
@@ -62,8 +79,30 @@ impl Texture {
         }
     }
 
-    pub fn create_bind_group(&self, device: &Device) -> (BindGroupLayout, BindGroup) {
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+    pub fn create_bind_group(
+        &self,
+        device: &Device,
+        bind_group_layout: &BindGroupLayout,
+    ) -> BindGroup {
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&self.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&self.sampler),
+                },
+            ],
+            label: Some("bind_group"),
+        });
+        bind_group
+    }
+
+    pub fn create_bind_group_layout(device: &Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
@@ -90,21 +129,6 @@ impl Texture {
                 },
             ],
             label: Some("texture_bind_group_layout"),
-        });
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&self.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&self.sampler),
-                },
-            ],
-            label: Some("bind_group"),
-        });
-        (bind_group_layout, bind_group)
+        })
     }
 }

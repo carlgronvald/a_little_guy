@@ -33,6 +33,8 @@ impl From<Vec2> for Velocity {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Asset {
     pub name: String,
+    pub animation: usize,
+    pub animation_start_time: f32,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

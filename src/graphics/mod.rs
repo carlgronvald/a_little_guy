@@ -18,3 +18,5 @@ pub use draw_state::DrawState;
 mod uniforms;
 
 mod pipeline;
+
+mod model;

@@ -19,8 +19,8 @@ impl<T: Pod + Zeroable> Uniform<T> {
         }
     }
 
-    pub fn create_bind_group(&self, device: &Device) -> (BindGroupLayout, BindGroup) {
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+    pub fn create_bind_group_layout(device: &Device) -> BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[wgpu::BindGroupLayoutEntry {
                 binding: 0,
                 visibility: wgpu::ShaderStages::VERTEX,
@@ -32,10 +32,16 @@ impl<T: Pod + Zeroable> Uniform<T> {
                 count: None,
             }],
             label: None,
-        });
+        })
+    }
 
+    pub fn create_bind_group(
+        &self,
+        device: &Device,
+        bind_group_layout: &BindGroupLayout,
+    ) -> BindGroup {
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &bind_group_layout,
+            layout: bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
                 resource: self.buffer.as_entire_binding(),
@@ -43,7 +49,7 @@ impl<T: Pod + Zeroable> Uniform<T> {
             label: None,
         });
 
-        (bind_group_layout, bind_group)
+        bind_group
     }
 
     pub fn update_uniform(&mut self, change: impl FnOnce(&mut T), queue: &Queue) {
@@ -53,6 +59,10 @@ impl<T: Pod + Zeroable> Uniform<T> {
             0,
             bytemuck::cast_slice(&[self.uniform_struct]),
         )
+    }
+
+    pub fn uniform_struct(&self) -> &T {
+        &self.uniform_struct
     }
 }
 
