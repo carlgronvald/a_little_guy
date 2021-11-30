@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use wgpu::{Device, Queue};
+use wgpu::Device;
+use winit::dpi::PhysicalSize;
 
 use crate::logic::{Asset, Position};
 
@@ -27,6 +28,8 @@ pub struct DrawState {
 
 impl DrawState {
     pub fn new(entities: Vec<(Asset, Position)>, camera_offset: [f32; 2], time: f32) -> Self {
+        let mut entities = entities;
+        entities.sort_by(|x, y| y.1.y.partial_cmp(&x.1.y).unwrap());
         Self {
             entities,
             camera_offset,
@@ -37,9 +40,9 @@ impl DrawState {
     pub fn render(
         &self,
         device: &Device,
-        queue: &Queue,
         uniforms: &DefaultUniforms,
         models: &HashMap<String, Model>,
+        screen_size: PhysicalSize<u32>,
     ) -> Vec<DrawPackage> {
         let background_vertex_array = {
             let vertices: Vec<Vertex> = self
@@ -112,7 +115,10 @@ impl DrawState {
             DrawPackage {
                 vertex_array: background_vertex_array,
                 uniforms: DefaultUniforms {
-                    camera_offset: self.camera_offset,
+                    camera_offset: [
+                        self.camera_offset[0] + (screen_size.width as f32) / 2.0,
+                        self.camera_offset[1] + (screen_size.height as f32) / 2.0,
+                    ],
                     ..*uniforms
                 },
                 texture: TextureIdentifier::new("background".into()),
@@ -120,7 +126,10 @@ impl DrawState {
             DrawPackage {
                 vertex_array: atlas_vertex_array,
                 uniforms: DefaultUniforms {
-                    camera_offset: self.camera_offset,
+                    camera_offset: [
+                        self.camera_offset[0] + (screen_size.width as f32) / 2.0,
+                        self.camera_offset[1] + (screen_size.height as f32) / 2.0,
+                    ],
                     ..*uniforms
                 },
                 texture: TextureIdentifier::new("atlas".into()),

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use wgpu::{BindGroup, BindGroupLayout, Device, Queue, Sampler, TextureView};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -16,10 +14,6 @@ impl TextureIdentifier {
 pub struct Texture {
     view: TextureView,
     sampler: Sampler,
-}
-
-pub struct TextureManager {
-    textures: HashMap<TextureIdentifier, Texture>,
 }
 
 impl Texture {
@@ -41,7 +35,7 @@ impl Texture {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb, // TODO: FIX DISCOLORED TEXTURES
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             label: Some("texture"),
         });

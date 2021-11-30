@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use wgpu::{BindGroup, Device, Queue, Surface, SurfaceConfiguration};
+use wgpu::{Device, Queue, Surface, SurfaceConfiguration};
 use winit::dpi::PhysicalSize;
 
 use crate::graphics::model::Animation;
@@ -129,26 +129,43 @@ impl Renderer {
             "atlas".into(),
             8,
             192.0,
-            vec![Animation::new(vec![0], 1.0)],
+            vec![Animation::new(vec![0], 1.0, false)],
         );
         models.insert("player".into(), player_model);
 
-        let bush_model = Model::new("atlas".into(), 8, 192.0, vec![Animation::new(vec![1], 1.0)]);
+        let bush_model = Model::new(
+            "atlas".into(),
+            16,
+            96.0,
+            vec![Animation::new(vec![2], 1.0, false)],
+        );
         models.insert("bush".into(), bush_model);
+
+        let lamppost_model = Model::new(
+            "atlas".into(),
+            8,
+            192.0,
+            vec![Animation::new(vec![2], 1.0, false)],
+        );
+        models.insert("lamp post".into(), lamppost_model);
 
         let arrow_model = Model::new(
             "atlas".into(),
             8,
             192.0,
-            vec![Animation::new(vec![8, 9, 10, 11], 0.125)],
+            vec![Animation::new(
+                vec![8, 9, 10, 11, 12, 13, 14, 15, 63],
+                0.125,
+                true,
+            )],
         );
         models.insert("arrow".into(), arrow_model);
 
         let player_model = Model::new(
             "background".into(),
             1,
-            2400.0,
-            vec![Animation::new(vec![0], 1.0)],
+            4800.0,
+            vec![Animation::new(vec![0], 1.0, false)],
         );
         models.insert("background".into(), player_model);
 
@@ -181,6 +198,13 @@ impl Renderer {
             self.config.width = new_size.width;
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
+            self.default_uniforms.update_uniform(
+                |x| {
+                    x.x_scale = 1.0 / (new_size.width as f32);
+                    x.y_scale = 1.0 / (new_size.height as f32)
+                },
+                &self.queue,
+            )
         }
     }
 
@@ -202,9 +226,9 @@ impl Renderer {
 
         let mut draw_packages = draw_state.render(
             &self.device,
-            &self.queue,
             self.default_uniforms.uniform_struct(),
             &self.models,
+            self.size,
         );
 
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

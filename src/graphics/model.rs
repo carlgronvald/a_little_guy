@@ -17,6 +17,7 @@ pub struct Model {
 pub struct Animation {
     indices: Vec<usize>,
     time_per_frame: f32,
+    one_off: bool,
 }
 
 impl Model {
@@ -57,7 +58,7 @@ impl Model {
         animation_time_elapsed: f32,
     ) -> (f32, f32, f32, f32) {
         let animation = self.animation(animation_index);
-        let index = animation.index((animation_time_elapsed / animation.time_per_frame()) as usize % animation.steps());
+        let index = animation.index((animation_time_elapsed / animation.time_per_frame()) as usize);
         let uv_mod = 1.0 / (self.indices_on_axis() as f32);
 
         let u_index = (index % self.indices_on_axis()) as f32;
@@ -76,7 +77,7 @@ impl Model {
         center_position: Position,
         animation_index: usize,
         animation_time_elapsed: f32,
-    ) -> [Vertex;4] {
+    ) -> [Vertex; 4] {
         let (min_u, min_v, max_u, max_v) = self.uv_indices(animation_index, animation_time_elapsed);
         [
             Vertex {
@@ -116,10 +117,11 @@ impl Model {
 }
 
 impl Animation {
-    pub fn new(indices: Vec<usize>, time_per_frame: f32) -> Self {
+    pub fn new(indices: Vec<usize>, time_per_frame: f32, one_off: bool) -> Self {
         Self {
             indices,
             time_per_frame,
+            one_off,
         }
     }
 
@@ -128,7 +130,11 @@ impl Animation {
     }
 
     pub fn index(&self, index: usize) -> usize {
-        self.indices[index]
+        self.indices[if self.one_off {
+            std::cmp::min(index, self.steps() - 1)
+        } else {
+            index % self.steps()
+        }]
     }
 
     pub fn time_per_frame(&self) -> f32 {

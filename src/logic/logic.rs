@@ -24,10 +24,7 @@ pub fn setup_world() -> (World, Entity) {
     let mut world = World::default();
 
     let player = world.push((
-        Position {
-            x: 445.0 * 3.0,
-            y: 407.0 * 3.0,
-        },
+        Position { x: 0.0, y: 0.0 },
         Velocity { dx: 0.0, dy: 0.0 },
         Asset {
             name: "player".into(),
@@ -55,6 +52,22 @@ pub fn setup_world() -> (World, Entity) {
             Position { x: 100.0, y: 100.0 },
             Asset {
                 name: "bush".into(),
+                animation: 0,
+                animation_start_time: 0.0,
+            },
+            Friction {},
+        ),
+    );
+
+    world.push(
+        // A bush
+        (
+            Position {
+                x: 480.0,
+                y: -540.0,
+            },
+            Asset {
+                name: "lamp post".into(),
                 animation: 0,
                 animation_start_time: 0.0,
             },
@@ -132,8 +145,13 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let first_time = SystemTime::now();
 
+        let mut start_time = SystemTime::now();
+
         loop {
-            let start_time = SystemTime::now();
+            resources.insert(Time {
+                elapsed_seconds: start_time.elapsed().unwrap().as_secs_f32(),
+            });
+            start_time = SystemTime::now();
 
             evh.handle_inputs(&event_receiver);
             let events = evh.tick_events();
@@ -233,8 +251,8 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             let _ = graphics_sender.send(DrawState::new(
                 draw_positions,
                 [
-                    rng.gen_range(-1.0..1.0) * extra_info.shake - position.x + 416.0,
-                    rng.gen_range(-1.0..1.0) * extra_info.shake - position.y + 290.0,
+                    rng.gen_range(-1.0..1.0) * extra_info.shake - position.x,
+                    rng.gen_range(-1.0..1.0) * extra_info.shake - position.y,
                 ],
                 first_time.elapsed().unwrap().as_secs_f32(),
             ));
