@@ -1,30 +1,36 @@
-use std::{thread::{self, JoinHandle}, collections::HashMap};
+use std::{
+    collections::HashMap,
+    thread::{self, JoinHandle},
+};
 
 use glm::Vec2;
 use legion::*;
-use rand::{Rng, prelude::ThreadRng};
+use rand::{prelude::ThreadRng, Rng};
 
 use super::{
-    controls, external_event_handler, update_lives_system, update_positions_system,
-    update_velocities_system, Asset, Friction, Position, Time, Velocity, collision::{CollisionMeshIdentifier, CollisionMesh, AABB},
+    collision::{CollisionMesh, CollisionMeshIdentifier, AABB},
+    *,
 };
 use crate::{
     channels::{LogicToWindowSender, WindowToLogicReceiver},
     graphics::DrawState,
-    logic::{TimedLife, Collider},
+    logic::{Collider, TimedLife},
 };
 
 use super::state_input_event::*;
 
 use std::time::SystemTime;
 
-pub fn setup_world(collision_mesh_identifiers : &HashMap<String, CollisionMeshIdentifier>) -> (World, Entity) {
+pub fn setup_world(
+    collision_mesh_identifiers: &HashMap<String, CollisionMeshIdentifier>,
+) -> (World, Entity) {
     println!("Hello, world!");
 
     let mut world = World::default();
 
     let player = world.push((
         Position { x: 0.0, y: 0.0 },
+        LastPosition { x: 0.0, y: 0.0 },
         Velocity { dx: 0.0, dy: 0.0 },
         Asset {
             name: "player".into(),
@@ -33,8 +39,8 @@ pub fn setup_world(collision_mesh_identifiers : &HashMap<String, CollisionMeshId
         },
         Friction {},
         Collider {
-            collision_mesh : collision_mesh_identifiers["basic"],
-            size : 192.0
+            collision_mesh: collision_mesh_identifiers["basic"],
+            size: 128.0,
         },
     ));
 
@@ -46,7 +52,7 @@ pub fn setup_world(collision_mesh_identifiers : &HashMap<String, CollisionMeshId
                 name: "background".into(),
                 animation: 0,
                 animation_start_time: 0.0,
-            }
+            },
         ),
     );
 
@@ -54,28 +60,38 @@ pub fn setup_world(collision_mesh_identifiers : &HashMap<String, CollisionMeshId
         // A bush
         (
             Position { x: 100.0, y: 100.0 },
+            LastPosition { x: 0.0, y: 0.0 },
             Asset {
                 name: "bush".into(),
                 animation: 0,
                 animation_start_time: 0.0,
             },
             Friction {},
+            Collider {
+                collision_mesh: collision_mesh_identifiers["basic"],
+                size: 16.0,
+            },
         ),
     );
 
     world.push(
-        // A bush
+        // A lamp post
         (
             Position {
                 x: 480.0,
                 y: -540.0,
             },
+            LastPosition { x: 0.0, y: 0.0 },
             Asset {
                 name: "lamp post".into(),
                 animation: 0,
                 animation_start_time: 0.0,
             },
             Friction {},
+            Collider {
+                collision_mesh: collision_mesh_identifiers["basic"],
+                size: 32.0,
+            },
         ),
     );
 
@@ -84,6 +100,7 @@ pub fn setup_world(collision_mesh_identifiers : &HashMap<String, CollisionMeshId
 
 pub fn setup_schedule() -> Schedule {
     Schedule::builder()
+        .add_system(update_last_position_system())
         .add_system(update_positions_system())
         .add_system(update_velocities_system())
         .add_system(update_lives_system())
@@ -129,7 +146,7 @@ impl ExtraInfo {
     }
 }
 
-fn handle_timed_life(world :&mut World) {
+fn handle_timed_life(world: &mut World) {
     let mut q = <(Entity, &TimedLife)>::query();
     let removed_entities: Vec<Entity> = q
         .iter(world)
@@ -147,20 +164,26 @@ fn handle_timed_life(world :&mut World) {
     }
 }
 
-fn create_draw_state(world :&World, extra_info : &ExtraInfo, position : &Position, rng : &mut ThreadRng, first_time : &SystemTime) -> DrawState {
+fn create_draw_state(
+    world: &World,
+    extra_info: &ExtraInfo,
+    position: &Position,
+    rng: &mut ThreadRng,
+    first_time: &SystemTime,
+) -> DrawState {
     let mut drawing_query = <(&Asset, &Position)>::query();
     let draw_positions: Vec<(Asset, Position)> = drawing_query
-    .iter(world)
-    .map(|(asset, position)| {
-        (
-            asset.clone(),
-            Position {
-                x: position.x.floor(),
-                y: position.y.floor(),
-            },
-        )
-    })
-    .collect();
+        .iter(world)
+        .map(|(asset, position)| {
+            (
+                asset.clone(),
+                Position {
+                    x: position.x.floor(),
+                    y: position.y.floor(),
+                },
+            )
+        })
+        .collect();
     DrawState::new(
         draw_positions,
         [
@@ -171,7 +194,6 @@ fn create_draw_state(world :&World, extra_info : &ExtraInfo, position : &Positio
     )
 }
 
-
 pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) -> JoinHandle<()> {
     thread::spawn(move || {
         let event_receiver = rx.channel_receiver;
@@ -179,15 +201,18 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let (collision_mesh_manager, collision_mesh_identifiers) = {
             let mut collision_mesh_manager = super::collision::CollisionMeshManager::new();
-            let mut collision_mesh_identifiers : HashMap<String, CollisionMeshIdentifier> = HashMap::new();
+            let mut collision_mesh_identifiers: HashMap<String, CollisionMeshIdentifier> =
+                HashMap::new();
 
-            let basic_identifier = collision_mesh_manager.add_collision_mesh(CollisionMesh::new(
-                vec![
-                    AABB { min_x : -0.5, min_y : -0.5, max_x : 0.5, max_y : 0.5 }
-                ]
-            ));
+            let basic_identifier =
+                collision_mesh_manager.add_collision_mesh(CollisionMesh::new(AABB {
+                    min_x: -0.5,
+                    min_y: -0.5,
+                    max_x: 0.5,
+                    max_y: 0.5,
+                }));
             collision_mesh_identifiers.insert("basic".into(), basic_identifier);
-            
+
             (collision_mesh_manager, collision_mesh_identifiers)
         };
 
@@ -206,8 +231,6 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let mut start_time = SystemTime::now();
 
-
-
         loop {
             resources.insert(Time {
                 elapsed_seconds: start_time.elapsed().unwrap().as_secs_f32(),
@@ -216,7 +239,6 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
             evh.handle_inputs(&event_receiver);
             let events = evh.tick_events();
-
 
             let (mut velocity, position) = if let Some(player_entry) = world.entry(player) {
                 (
@@ -228,7 +250,7 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             };
 
             {
-                    // HANDLE INPUT EVENTS
+                // HANDLE INPUT EVENTS
                 for event in events {
                     match event {
                         StateInputEvent::MovePlayerRelative { delta } => {
@@ -260,9 +282,9 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                                     ),
                                     TimedLife { seconds_left: 1.0 },
                                     Collider {
-                                        collision_mesh : collision_mesh_identifiers["basic"],
-                                        size : 48.0
-                                    }
+                                        collision_mesh: collision_mesh_identifiers["basic"],
+                                        size: 48.0,
+                                    },
                                 ));
                             }
                             extra_info.charge = 0;
@@ -285,24 +307,44 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             handle_timed_life(&mut world);
 
             //TODO: COLLISION
-            let mut colliding_entities : Vec<(Entity, Entity)> = Vec::new();
+            let mut colliding_entities: Vec<(Entity, Entity)> = Vec::new();
             let mut collision_query_1 = <(&Position, &Collider, Entity)>::query();
             let mut collision_query_2 = <(&Position, &Collider, Entity)>::query();
             for (position_1, collider_1, entity_1) in collision_query_1.iter(&world) {
                 for (position_2, collider_2, entity_2) in collision_query_2.iter(&world) {
-                    if entity_1 != entity_2 && Collider::is_colliding(position_1, collider_1, position_2, collider_2, &collision_mesh_manager) {
+                    if entity_1 != entity_2
+                        && Collider::is_colliding(
+                            position_1,
+                            collider_1,
+                            position_2,
+                            collider_2,
+                            &collision_mesh_manager,
+                        )
+                    {
                         colliding_entities.push((*entity_1, *entity_2));
                     }
                 }
             }
 
             for (ent1, ent2) in colliding_entities {
-                println!("{:?} <-> {:?}", ent1, ent2);
+                let mut ent1entry = world.entry(ent1).unwrap();
+                println!("Found entry! {:?}, {:?}", ent1, ent2);
+
+                if let Ok(&last_position) = ent1entry.get_component::<LastPosition>() {
+                    let position = ent1entry.get_component_mut::<Position>().unwrap();
+                    position.x = last_position.x;
+                    position.y = last_position.y;
+                }
             }
 
-
             extra_info.update();
-            let _ = graphics_sender.send(create_draw_state(&world, &extra_info, &position, &mut rng, &first_time));
+            let _ = graphics_sender.send(create_draw_state(
+                &world,
+                &extra_info,
+                &position,
+                &mut rng,
+                &first_time,
+            ));
 
             let end_time = SystemTime::now();
             let tick_duration = end_time.duration_since(start_time).unwrap().as_millis();

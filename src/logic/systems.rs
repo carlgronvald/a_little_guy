@@ -1,4 +1,4 @@
-use super::{Friction, Position, Time, TimedLife, Velocity};
+use super::{Friction, LastPosition, Position, Time, TimedLife, Velocity};
 use legion::system;
 
 #[system(for_each)]
@@ -17,4 +17,10 @@ pub fn update_velocities(vel: &mut Velocity, _friction: &Friction, #[resource] t
 #[system(for_each)]
 pub fn update_lives(life: &mut TimedLife, #[resource] time: &Time) {
     life.seconds_left -= time.elapsed_seconds;
+}
+
+#[system(for_each)]
+pub fn update_last_position(position: &Position, last_position: &mut LastPosition) {
+    last_position.x = position.x;
+    last_position.y = position.y;
 }
