@@ -1,24 +1,24 @@
-use std::thread::{self, JoinHandle};
+use std::{thread::{self, JoinHandle}, collections::HashMap};
 
 use glm::Vec2;
 use legion::*;
-use rand::Rng;
+use rand::{Rng, prelude::ThreadRng};
 
 use super::{
     controls, external_event_handler, update_lives_system, update_positions_system,
-    update_velocities_system, Asset, Friction, Position, Time, Velocity,
+    update_velocities_system, Asset, Friction, Position, Time, Velocity, collision::{CollisionMeshIdentifier, CollisionMesh, AABB},
 };
 use crate::{
     channels::{LogicToWindowSender, WindowToLogicReceiver},
     graphics::DrawState,
-    logic::TimedLife,
+    logic::{TimedLife, Collider},
 };
 
 use super::state_input_event::*;
 
 use std::time::SystemTime;
 
-pub fn setup_world() -> (World, Entity) {
+pub fn setup_world(collision_mesh_identifiers : &HashMap<String, CollisionMeshIdentifier>) -> (World, Entity) {
     println!("Hello, world!");
 
     let mut world = World::default();
@@ -32,6 +32,10 @@ pub fn setup_world() -> (World, Entity) {
             animation_start_time: 0.0,
         },
         Friction {},
+        Collider {
+            collision_mesh : collision_mesh_identifiers["basic"],
+            size : 192.0
+        },
     ));
 
     world.push(
@@ -42,7 +46,7 @@ pub fn setup_world() -> (World, Entity) {
                 name: "background".into(),
                 animation: 0,
                 animation_start_time: 0.0,
-            },
+            }
         ),
     );
 
@@ -125,16 +129,71 @@ impl ExtraInfo {
     }
 }
 
+fn handle_timed_life(world :&mut World) {
+    let mut q = <(Entity, &TimedLife)>::query();
+    let removed_entities: Vec<Entity> = q
+        .iter(world)
+        .flat_map(|(entity, time)| {
+            if time.seconds_left <= 0.0 {
+                Some(*entity)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    for entity in removed_entities {
+        world.remove(entity);
+    }
+}
+
+fn create_draw_state(world :&World, extra_info : &ExtraInfo, position : &Position, rng : &mut ThreadRng, first_time : &SystemTime) -> DrawState {
+    let mut drawing_query = <(&Asset, &Position)>::query();
+    let draw_positions: Vec<(Asset, Position)> = drawing_query
+    .iter(world)
+    .map(|(asset, position)| {
+        (
+            asset.clone(),
+            Position {
+                x: position.x.floor(),
+                y: position.y.floor(),
+            },
+        )
+    })
+    .collect();
+    DrawState::new(
+        draw_positions,
+        [
+            rng.gen_range(-1.0..1.0) * extra_info.shake - position.x,
+            rng.gen_range(-1.0..1.0) * extra_info.shake - position.y,
+        ],
+        first_time.elapsed().unwrap().as_secs_f32(),
+    )
+}
+
+
 pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) -> JoinHandle<()> {
     thread::spawn(move || {
         let event_receiver = rx.channel_receiver;
         let graphics_sender = tx.render_pack;
 
-        let (mut world, player) = setup_world();
+        let (collision_mesh_manager, collision_mesh_identifiers) = {
+            let mut collision_mesh_manager = super::collision::CollisionMeshManager::new();
+            let mut collision_mesh_identifiers : HashMap<String, CollisionMeshIdentifier> = HashMap::new();
+
+            let basic_identifier = collision_mesh_manager.add_collision_mesh(CollisionMesh::new(
+                vec![
+                    AABB { min_x : -0.5, min_y : -0.5, max_x : 0.5, max_y : 0.5 }
+                ]
+            ));
+            collision_mesh_identifiers.insert("basic".into(), basic_identifier);
+            
+            (collision_mesh_manager, collision_mesh_identifiers)
+        };
+
+        let (mut world, player) = setup_world(&collision_mesh_identifiers);
         let mut schedule = setup_schedule();
         let mut resources = setup_resources();
-
-        let mut drawing_query = <(&Asset, &Position)>::query();
 
         let mut extra_info = ExtraInfo::new();
 
@@ -147,6 +206,8 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let mut start_time = SystemTime::now();
 
+
+
         loop {
             resources.insert(Time {
                 elapsed_seconds: start_time.elapsed().unwrap().as_secs_f32(),
@@ -156,9 +217,6 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             evh.handle_inputs(&event_receiver);
             let events = evh.tick_events();
 
-            // -----------------------------
-            //      Handling user input
-            // -----------------------------
 
             let (mut velocity, position) = if let Some(player_entry) = world.entry(player) {
                 (
@@ -169,39 +227,46 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                 panic!("The player has disappeared!");
             };
 
-            for event in events {
-                match event {
-                    StateInputEvent::MovePlayerRelative { delta } => {
-                        velocity.dx += delta.x * extra_info.speed;
-                        velocity.dy += delta.y * extra_info.speed;
-                    }
-                    StateInputEvent::Jump => extra_info.shake += 5.0,
-                    StateInputEvent::Charge(_) => {
-                        extra_info.speed = 2.0;
-                        if extra_info.charge < 30 {
-                            extra_info.charge += 1;
+            {
+                    // HANDLE INPUT EVENTS
+                for event in events {
+                    match event {
+                        StateInputEvent::MovePlayerRelative { delta } => {
+                            velocity.dx += delta.x * extra_info.speed;
+                            velocity.dy += delta.y * extra_info.speed;
                         }
-                    }
-                    StateInputEvent::Shoot(direction) => {
-                        extra_info.speed = 16.0;
-                        if extra_info.charge > 10 {
-                            world.push((
-                                Asset {
-                                    name: "arrow".into(),
-                                    animation: 0,
-                                    animation_start_time: first_time
-                                        .elapsed()
-                                        .unwrap()
-                                        .as_secs_f32(),
-                                },
-                                position,
-                                Velocity::from(
-                                    Vec2::from(direction) * (32.0 * (extra_info.charge as f32)),
-                                ),
-                                TimedLife { seconds_left: 1.0 },
-                            ));
+                        StateInputEvent::Jump => extra_info.shake += 5.0,
+                        StateInputEvent::Charge(_) => {
+                            extra_info.speed = 2.0;
+                            if extra_info.charge < 30 {
+                                extra_info.charge += 1;
+                            }
                         }
-                        extra_info.charge = 0;
+                        StateInputEvent::Shoot(direction) => {
+                            extra_info.speed = 16.0;
+                            if extra_info.charge > 10 {
+                                world.push((
+                                    Asset {
+                                        name: "arrow".into(),
+                                        animation: 0,
+                                        animation_start_time: first_time
+                                            .elapsed()
+                                            .unwrap()
+                                            .as_secs_f32(),
+                                    },
+                                    position,
+                                    Velocity::from(
+                                        Vec2::from(direction) * (32.0 * (extra_info.charge as f32)),
+                                    ),
+                                    TimedLife { seconds_left: 1.0 },
+                                    Collider {
+                                        collision_mesh : collision_mesh_identifiers["basic"],
+                                        size : 48.0
+                                    }
+                                ));
+                            }
+                            extra_info.charge = 0;
+                        }
                     }
                 }
             }
@@ -216,46 +281,28 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             // Do world step
             step(&mut world, &mut schedule, &mut resources);
 
-            let mut q = <(Entity, &TimedLife)>::query();
-            let removed_entities: Vec<Entity> = q
-                .iter(&world)
-                .flat_map(|(entity, time)| {
-                    if time.seconds_left <= 0.0 {
-                        Some(*entity)
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            for entity in removed_entities {
-                world.remove(entity);
-            }
-
-            extra_info.update();
+            // Remove entities whose lives are over
+            handle_timed_life(&mut world);
 
             //TODO: COLLISION
+            let mut colliding_entities : Vec<(Entity, Entity)> = Vec::new();
+            let mut collision_query_1 = <(&Position, &Collider, Entity)>::query();
+            let mut collision_query_2 = <(&Position, &Collider, Entity)>::query();
+            for (position_1, collider_1, entity_1) in collision_query_1.iter(&world) {
+                for (position_2, collider_2, entity_2) in collision_query_2.iter(&world) {
+                    if entity_1 != entity_2 && Collider::is_colliding(position_1, collider_1, position_2, collider_2, &collision_mesh_manager) {
+                        colliding_entities.push((*entity_1, *entity_2));
+                    }
+                }
+            }
 
-            let draw_positions: Vec<(Asset, Position)> = drawing_query
-                .iter(&world)
-                .map(|(asset, position)| {
-                    (
-                        asset.clone(),
-                        Position {
-                            x: position.x.floor(),
-                            y: position.y.floor(),
-                        },
-                    )
-                })
-                .collect();
-            let _ = graphics_sender.send(DrawState::new(
-                draw_positions,
-                [
-                    rng.gen_range(-1.0..1.0) * extra_info.shake - position.x,
-                    rng.gen_range(-1.0..1.0) * extra_info.shake - position.y,
-                ],
-                first_time.elapsed().unwrap().as_secs_f32(),
-            ));
+            for (ent1, ent2) in colliding_entities {
+                println!("{:?} <-> {:?}", ent1, ent2);
+            }
+
+
+            extra_info.update();
+            let _ = graphics_sender.send(create_draw_state(&world, &extra_info, &position, &mut rng, &first_time));
 
             let end_time = SystemTime::now();
             let tick_duration = end_time.duration_since(start_time).unwrap().as_millis();

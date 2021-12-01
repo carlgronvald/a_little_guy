@@ -17,6 +17,8 @@ pub use logic::start_logic_thread;
 
 use serde::{Deserialize, Serialize};
 
+mod collision;
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Direction {
     Up,
