@@ -1,5 +1,9 @@
-use super::{Friction, Position, Time, TimedLife, Velocity};
+use super::components::*;
+use super::Time;
 use legion::system;
+use rand::prelude::StdRng;
+use rand::prelude::ThreadRng;
+use rand::Rng;
 
 #[system(for_each)]
 pub fn update_positions(pos: &mut Position, vel: &Velocity, #[resource] time: &Time) {
@@ -17,4 +21,15 @@ pub fn update_velocities(vel: &mut Velocity, _friction: &Friction, #[resource] t
 #[system(for_each)]
 pub fn update_lives(life: &mut TimedLife, #[resource] time: &Time) {
     life.seconds_left -= time.elapsed_seconds;
+}
+
+#[system(for_each)]
+pub fn random_walk_ai(
+    velocity: &mut Velocity,
+    ai_random_walk: &AiRandomWalk,
+    #[resource] time: &Time,
+    #[resource] rng: &mut StdRng,
+) {
+    velocity.dx += rng.gen_range(-1.0..1.0) * time.elapsed_seconds * ai_random_walk.speed;
+    velocity.dy += rng.gen_range(-1.0..1.0) * time.elapsed_seconds * ai_random_walk.speed;
 }

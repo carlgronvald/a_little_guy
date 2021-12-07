@@ -161,13 +161,25 @@ impl Renderer {
         );
         models.insert("arrow".into(), arrow_model);
 
-        let player_model = Model::new(
+        let background_model = Model::new(
             "background".into(),
             1,
             4800.0,
             vec![Animation::new(vec![0], 1.0, false)],
         );
-        models.insert("background".into(), player_model);
+        models.insert("background".into(), background_model);
+
+        let firefly_model = Model::new(
+            "atlas".into(),
+            32,
+            48.0,
+            vec![Animation::new(
+                vec![6, 6, 6, 6, 6, 6, 6, 6, 7, 38, 39, 39, 38, 7],
+                0.2,
+                false,
+            )],
+        );
+        models.insert("firefly".into(), firefly_model);
 
         models
     }

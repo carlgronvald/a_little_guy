@@ -111,6 +111,19 @@ impl DrawState {
             VertexArray::new(device, &vertices, &indices)
         };
 
+        if self
+            .entities
+            .iter()
+            .filter(|(asset, _)| {
+                models[&asset.name].texture() != "atlas"
+                    && models[&asset.name].texture() != "background"
+            })
+            .count()
+            > 0
+        {
+            panic!("Trying to draw from a non-existant texture! Right now only the background and atlas texture are implemented.")
+        }
+
         vec![
             DrawPackage {
                 vertex_array: background_vertex_array,

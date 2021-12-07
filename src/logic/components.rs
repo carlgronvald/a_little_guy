@@ -63,20 +63,20 @@ pub struct Collider {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Team {
     PLAYER,
-    ENEMY
+    ENEMY,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Status {
-    pub collides_with_own_team : bool,
-    pub team : Team,
+    pub collides_with_own_team: bool,
+    pub team: Team,
 }
 
 impl Default for Status {
     fn default() -> Self {
         Self {
-            collides_with_own_team : false,
-            team : Team::ENEMY,
+            collides_with_own_team: false,
+            team: Team::ENEMY,
         }
     }
 }
@@ -113,4 +113,9 @@ impl Collider {
         col1.transform([pos1.x, pos1.y], sz1)
             .closeest_intersection_vector(&col2.transform([pos2.x, pos2.y], sz2))
     }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct AiRandomWalk {
+    pub speed: f32,
 }

@@ -5,7 +5,10 @@ use std::{
 
 use glm::Vec2;
 use legion::*;
-use rand::{prelude::ThreadRng, Rng};
+use rand::{
+    prelude::{StdRng, ThreadRng},
+    Rng, SeedableRng,
+};
 
 use super::{
     collision::{CollisionMesh, CollisionMeshIdentifier, AABB},
@@ -42,9 +45,9 @@ pub fn setup_world(
             size: 128.0,
         },
         Status {
-            collides_with_own_team : true,
-            team : Team::PLAYER
-        }
+            collides_with_own_team: true,
+            team: Team::PLAYER,
+        },
     ));
 
     world.push(
@@ -94,6 +97,63 @@ pub fn setup_world(
         ),
     );
 
+    world.push(
+        // A firefly
+        (
+            Position { x: 0.0, y: 0.0 },
+            Velocity { dx: 0.0, dy: 0.0 },
+            Friction {},
+            Asset {
+                name: "firefly".into(),
+                animation: 0,
+                animation_start_time: 0.0,
+            },
+            AiRandomWalk { speed: 192.0 },
+        ),
+    );
+    world.push(
+        // A firefly
+        (
+            Position { x: 0.0, y: 0.0 },
+            Velocity { dx: 0.0, dy: 0.0 },
+            Friction {},
+            Asset {
+                name: "firefly".into(),
+                animation: 0,
+                animation_start_time: 0.0,
+            },
+            AiRandomWalk { speed: 192.0 },
+        ),
+    );
+    world.push(
+        // A firefly
+        (
+            Position { x: 0.0, y: 0.0 },
+            Velocity { dx: 0.0, dy: 0.0 },
+            Friction {},
+            Asset {
+                name: "firefly".into(),
+                animation: 0,
+                animation_start_time: 0.0,
+            },
+            AiRandomWalk { speed: 192.0 },
+        ),
+    );
+    world.push(
+        // A firefly
+        (
+            Position { x: 0.0, y: 0.0 },
+            Velocity { dx: 0.0, dy: 0.0 },
+            Friction {},
+            Asset {
+                name: "firefly".into(),
+                animation: 0,
+                animation_start_time: 0.0,
+            },
+            AiRandomWalk { speed: 192.0 },
+        ),
+    );
+
     (world, player)
 }
 
@@ -102,6 +162,7 @@ pub fn setup_schedule() -> Schedule {
         .add_system(update_positions_system())
         .add_system(update_velocities_system())
         .add_system(update_lives_system())
+        .add_system(random_walk_ai_system())
         .build()
 }
 
@@ -110,6 +171,7 @@ pub fn setup_resources() -> Resources {
     resources.insert(Time {
         elapsed_seconds: 0.0f32,
     });
+    resources.insert(StdRng::from_entropy());
 
     resources
 }
@@ -284,9 +346,9 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                                         size: 48.0,
                                     },
                                     Status {
-                                        collides_with_own_team : false,
-                                        team : Team::PLAYER
-                                    }
+                                        collides_with_own_team: false,
+                                        team: Team::PLAYER,
+                                    },
                                 ));
                             }
                             extra_info.charge = 0;
@@ -339,12 +401,17 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             }
 
             for (ent1, ent2, collision_vector) in colliding_entities {
-
-                { // Check status; if these entities are on the same team and either doesn't collide with their own team, they shouldn't collide.
+                {
+                    // Check status; if these entities are on the same team and either doesn't collide with their own team, they shouldn't collide.
                     let ent1entry = world.entry_ref(ent1).unwrap();
                     let ent2entry = world.entry_ref(ent2).unwrap();
-                    if let (Ok(status1), Ok(status2)) = (ent1entry.get_component::<Status>(), ent2entry.get_component::<Status>()) {
-                        if status1.team == status2.team && (!status1.collides_with_own_team || !status2.collides_with_own_team) {
+                    if let (Ok(status1), Ok(status2)) = (
+                        ent1entry.get_component::<Status>(),
+                        ent2entry.get_component::<Status>(),
+                    ) {
+                        if status1.team == status2.team
+                            && (!status1.collides_with_own_team || !status2.collides_with_own_team)
+                        {
                             continue;
                         }
                     }
@@ -352,7 +419,6 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
                 let mut ent1entry = world.entry(ent1).unwrap();
                 println!("Found entry! {:?}, {:?}", ent1, ent2);
-                
 
                 if let Ok(_) = ent1entry.get_component::<Velocity>() {
                     // Only move entities that have velocities === can move

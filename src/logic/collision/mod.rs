@@ -3,3 +3,5 @@ pub use collision_mesh::{CollisionMesh, CollisionMeshIdentifier, CollisionMeshMa
 
 mod aabb;
 pub use aabb::AABB;
+
+mod triangle;
