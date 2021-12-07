@@ -41,6 +41,10 @@ pub fn setup_world(
             collision_mesh: collision_mesh_identifiers["basic"],
             size: 128.0,
         },
+        Status {
+            collides_with_own_team : true,
+            team : Team::PLAYER
+        }
     ));
 
     world.push(
@@ -279,6 +283,10 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                                         collision_mesh: collision_mesh_identifiers["basic"],
                                         size: 48.0,
                                     },
+                                    Status {
+                                        collides_with_own_team : false,
+                                        team : Team::PLAYER
+                                    }
                                 ));
                             }
                             extra_info.charge = 0;
@@ -331,8 +339,20 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             }
 
             for (ent1, ent2, collision_vector) in colliding_entities {
+
+                { // Check status; if these entities are on the same team and either doesn't collide with their own team, they shouldn't collide.
+                    let ent1entry = world.entry_ref(ent1).unwrap();
+                    let ent2entry = world.entry_ref(ent2).unwrap();
+                    if let (Ok(status1), Ok(status2)) = (ent1entry.get_component::<Status>(), ent2entry.get_component::<Status>()) {
+                        if status1.team == status2.team && (!status1.collides_with_own_team || !status2.collides_with_own_team) {
+                            continue;
+                        }
+                    }
+                }
+
                 let mut ent1entry = world.entry(ent1).unwrap();
                 println!("Found entry! {:?}, {:?}", ent1, ent2);
+                
 
                 if let Ok(_) = ent1entry.get_component::<Velocity>() {
                     // Only move entities that have velocities === can move

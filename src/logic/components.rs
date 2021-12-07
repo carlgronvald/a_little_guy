@@ -60,6 +60,27 @@ pub struct Collider {
     pub size: f32,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Team {
+    PLAYER,
+    ENEMY
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Status {
+    pub collides_with_own_team : bool,
+    pub team : Team,
+}
+
+impl Default for Status {
+    fn default() -> Self {
+        Self {
+            collides_with_own_team : false,
+            team : Team::ENEMY,
+        }
+    }
+}
+
 impl Collider {
     pub fn is_colliding(
         pos1: &Position,
