@@ -17,6 +17,10 @@ impl CollisionMesh {
         let aabb = self.aabb * multiplication + translation;
         CollisionMesh { aabb }
     }
+
+    pub fn closeest_intersection_vector(&self, mesh: &CollisionMesh) -> glm::Vec2 {
+        self.aabb.closest_intersection_vector(&mesh.aabb)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

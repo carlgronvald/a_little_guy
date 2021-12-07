@@ -52,24 +52,24 @@ impl AABB {
         let x_2 = aabb.min_x - self.max_x;
         let y_1 = aabb.max_y - self.min_y;
         let y_2 = aabb.min_y - self.max_y;
-        let &max = [x_1, x_2, y_1, y_2]
+        let &min = [x_1, x_2, y_1, y_2]
             .iter()
-            .reduce(|x, y| if x.abs() > y.abs() { x } else { y })
+            .reduce(|x, y| if x.abs() < y.abs() { x } else { y })
             .unwrap();
 
-        let direction = if max == x_1 {
+        let direction = if min == x_1 {
             Direction::Right
-        } else if max == x_2 {
+        } else if min == x_2 {
             Direction::Left
-        } else if max == y_1 {
+        } else if min == y_1 {
             Direction::Up
-        } else if max == y_2 {
+        } else if min == y_2 {
             Direction::Down
         } else {
             unreachable!()
         };
 
-        glm::Vec2::from(direction) * (max.abs())
+        glm::Vec2::from(direction) * (min.abs())
     }
 }
 

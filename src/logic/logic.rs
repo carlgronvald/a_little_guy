@@ -30,7 +30,6 @@ pub fn setup_world(
 
     let player = world.push((
         Position { x: 0.0, y: 0.0 },
-        LastPosition { x: 0.0, y: 0.0 },
         Velocity { dx: 0.0, dy: 0.0 },
         Asset {
             name: "player".into(),
@@ -60,13 +59,11 @@ pub fn setup_world(
         // A bush
         (
             Position { x: 100.0, y: 100.0 },
-            LastPosition { x: 0.0, y: 0.0 },
             Asset {
                 name: "bush".into(),
                 animation: 0,
                 animation_start_time: 0.0,
             },
-            Friction {},
             Collider {
                 collision_mesh: collision_mesh_identifiers["basic"],
                 size: 16.0,
@@ -81,13 +78,11 @@ pub fn setup_world(
                 x: 480.0,
                 y: -540.0,
             },
-            LastPosition { x: 0.0, y: 0.0 },
             Asset {
                 name: "lamp post".into(),
                 animation: 0,
                 animation_start_time: 0.0,
             },
-            Friction {},
             Collider {
                 collision_mesh: collision_mesh_identifiers["basic"],
                 size: 32.0,
@@ -100,7 +95,6 @@ pub fn setup_world(
 
 pub fn setup_schedule() -> Schedule {
     Schedule::builder()
-        .add_system(update_last_position_system())
         .add_system(update_positions_system())
         .add_system(update_velocities_system())
         .add_system(update_lives_system())
@@ -307,7 +301,7 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             handle_timed_life(&mut world);
 
             //TODO: COLLISION
-            let mut colliding_entities: Vec<(Entity, Entity)> = Vec::new();
+            let mut colliding_entities: Vec<(Entity, Entity, Vec2)> = Vec::new();
             let mut collision_query_1 = <(&Position, &Collider, Entity)>::query();
             let mut collision_query_2 = <(&Position, &Collider, Entity)>::query();
             for (position_1, collider_1, entity_1) in collision_query_1.iter(&world) {
@@ -321,19 +315,39 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                             &collision_mesh_manager,
                         )
                     {
-                        colliding_entities.push((*entity_1, *entity_2));
+                        colliding_entities.push((
+                            *entity_1,
+                            *entity_2,
+                            Collider::closest_intersection_vector(
+                                position_1,
+                                collider_1,
+                                position_2,
+                                collider_2,
+                                &collision_mesh_manager,
+                            ),
+                        ));
                     }
                 }
             }
 
-            for (ent1, ent2) in colliding_entities {
+            for (ent1, ent2, collision_vector) in colliding_entities {
                 let mut ent1entry = world.entry(ent1).unwrap();
                 println!("Found entry! {:?}, {:?}", ent1, ent2);
 
-                if let Ok(&last_position) = ent1entry.get_component::<LastPosition>() {
-                    let position = ent1entry.get_component_mut::<Position>().unwrap();
-                    position.x = last_position.x;
-                    position.y = last_position.y;
+                if let Ok(_) = ent1entry.get_component::<Velocity>() {
+                    // Only move entities that have velocities === can move
+                    {
+                        let position = ent1entry.get_component_mut::<Position>().unwrap();
+                        position.x += collision_vector.x;
+                        position.y += collision_vector.y;
+                    }
+                    {
+                        let velocity = ent1entry.get_component_mut::<Velocity>().unwrap();
+                        let dvel = Vec2::from(*velocity).dot(&collision_vector.normalize())
+                            * collision_vector.normalize();
+                        velocity.dx -= dvel.x;
+                        velocity.dy -= dvel.y;
+                    }
                 }
             }
 
