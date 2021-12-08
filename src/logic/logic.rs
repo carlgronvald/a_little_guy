@@ -11,7 +11,7 @@ use rand::{
 };
 
 use super::{
-    collision::{CollisionMesh, CollisionMeshIdentifier, AABB},
+    collision::{Aabb, CollisionMesh, CollisionMeshIdentifier},
     *,
 };
 use crate::{
@@ -265,7 +265,7 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                 HashMap::new();
 
             let basic_identifier =
-                collision_mesh_manager.add_collision_mesh(CollisionMesh::new(AABB {
+                collision_mesh_manager.add_collision_mesh(CollisionMesh::new(Aabb {
                     min_x: -0.5,
                     min_y: -0.5,
                     max_x: 0.5,

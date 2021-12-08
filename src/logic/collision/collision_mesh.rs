@@ -1,11 +1,11 @@
-use super::AABB;
+use super::Aabb;
 
 pub struct CollisionMesh {
-    pub aabb: AABB,
+    pub aabb: Aabb,
 }
 
 impl CollisionMesh {
-    pub fn new(aabb: AABB) -> Self {
+    pub fn new(aabb: Aabb) -> Self {
         Self { aabb }
     }
 
