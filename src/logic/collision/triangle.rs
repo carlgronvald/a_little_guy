@@ -30,6 +30,9 @@ pub enum TriangleCorner {
 
 impl Triangle {
     pub fn new(a: Vec2, b: Vec2, c: Vec2) -> Self {
+        if glm::vec2(b.y - a.y, b.x - a.x).dot(&(c - b)) <= 0.0 {
+            panic!("Triangles must be counter clockwise!")
+        }
         // TODO: MAKE SURE TRIANGLES ARE ALWAYS GIVEN COUNTERCLOCKWISE
         let min_x = *[a.x, b.x, c.x]
             .iter()
@@ -41,11 +44,11 @@ impl Triangle {
             .unwrap();
         let max_x = *[a.x, b.x, c.x]
             .iter()
-            .reduce(|k, l| if k < l { k } else { l })
+            .reduce(|k, l| if k > l { k } else { l })
             .unwrap();
         let max_y = *[a.y, b.y, c.y]
             .iter()
-            .reduce(|k, l| if k < l { k } else { l })
+            .reduce(|k, l| if k > l { k } else { l })
             .unwrap();
         Self {
             a,
@@ -61,8 +64,26 @@ impl Triangle {
         }
     }
 
-    pub fn surrounding_aabb(&self) -> Aabb {
-        self.surrounding_aabb
+    pub fn closest_intersection_vector(&self, aabb: &Aabb) -> Option<Vec2> {
+        let mut min_distance = f32::INFINITY;
+        let mut closest_vector = None;
+        for side in TriangleSide::iter() {
+            let vector_to_side = self.vector_to_side(side);
+            let distance_to_side = self.distance_to_side(side, &vector_to_side);
+
+            for corner in AabbCorner::iter() {
+                let corner = aabb.get_corner(corner);
+                let projected_distance =
+                    distance_to_side - (corner - self.center_point).dot(&vector_to_side);
+                if projected_distance >= 0.0 && projected_distance < min_distance {
+                    min_distance = projected_distance;
+                    if projected_distance > 0.0 {
+                        closest_vector = Some(vector_to_side * projected_distance);
+                    }
+                }
+            }
+        }
+        closest_vector
     }
 
     pub fn approx_is_colliding(&self, aabb: &Aabb) -> bool {

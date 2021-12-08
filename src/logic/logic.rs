@@ -11,7 +11,7 @@ use rand::{
 };
 
 use super::{
-    collision::{Aabb, CollisionMesh, CollisionMeshIdentifier},
+    collision::{Aabb, CollisionMesh, CollisionMeshIdentifier, Triangle},
     *,
 };
 use crate::{
@@ -42,7 +42,7 @@ pub fn setup_world(
         Friction {},
         Collider {
             collision_mesh: collision_mesh_identifiers["basic"],
-            size: 128.0,
+            size: 96.0,
         },
         Status {
             collides_with_own_team: true,
@@ -291,6 +291,12 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let mut start_time = SystemTime::now();
 
+        let test_triangle = Triangle::new(
+            glm::vec2(0.0, -200.0),
+            glm::vec2(200.0, -200.0),
+            glm::vec2(200.0, 0.0),
+        );
+
         loop {
             resources.insert(Time {
                 elapsed_seconds: start_time.elapsed().unwrap().as_secs_f32(),
@@ -371,37 +377,42 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
             handle_timed_life(&mut world);
 
             //TODO: COLLISION
-            let mut colliding_entities: Vec<(Entity, Entity, Vec2)> = Vec::new();
+            let mut colliding_entities: Vec<(Entity, Option<Entity>, Vec2)> = Vec::new();
             let mut collision_query_1 = <(&Position, &Collider, Entity)>::query();
             let mut collision_query_2 = <(&Position, &Collider, Entity)>::query();
             for (position_1, collider_1, entity_1) in collision_query_1.iter(&world) {
+                let collision_mesh_1 = collision_mesh_manager.get_collision_mesh(
+                    collider_1.collision_mesh,
+                    Vec2::from(*position_1),
+                    collider_1.size,
+                );
                 for (position_2, collider_2, entity_2) in collision_query_2.iter(&world) {
-                    if entity_1 != entity_2
-                        && Collider::is_colliding(
-                            position_1,
-                            collider_1,
-                            position_2,
-                            collider_2,
-                            &collision_mesh_manager,
-                        )
-                    {
-                        colliding_entities.push((
-                            *entity_1,
-                            *entity_2,
-                            Collider::closest_intersection_vector(
-                                position_1,
-                                collider_1,
-                                position_2,
-                                collider_2,
-                                &collision_mesh_manager,
-                            ),
-                        ));
+                    if entity_1 != entity_2 {
+                        let collision_mesh_2 = collision_mesh_manager.get_collision_mesh(
+                            collider_2.collision_mesh,
+                            Vec2::from(*position_2),
+                            collider_2.size,
+                        );
+                        if collision_mesh_1.is_colliding(&collision_mesh_2) {
+                            colliding_entities.push((
+                                *entity_1,
+                                Some(*entity_2),
+                                collision_mesh_1.closest_intersection_vector(&collision_mesh_2),
+                            ));
+                        }
                     }
+                }
+                if test_triangle.approx_is_colliding(&collision_mesh_1.aabb) {
+                    colliding_entities.push((
+                        *entity_1,
+                        None,
+                        test_triangle.closest_intersection_vector(&collision_mesh_1.aabb),
+                    ));
                 }
             }
 
             for (ent1, ent2, collision_vector) in colliding_entities {
-                {
+                if let Some(ent2) = ent2 {
                     // Check status; if these entities are on the same team and either doesn't collide with their own team, they shouldn't collide.
                     let ent1entry = world.entry_ref(ent1).unwrap();
                     let ent2entry = world.entry_ref(ent2).unwrap();
@@ -421,6 +432,7 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                 println!("Found entry! {:?}, {:?}", ent1, ent2);
 
                 if let Ok(_) = ent1entry.get_component::<Velocity>() {
+                    println!("Collision vector: {:?}", collision_vector);
                     // Only move entities that have velocities === can move
                     {
                         let position = ent1entry.get_component_mut::<Position>().unwrap();

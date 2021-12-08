@@ -1,3 +1,5 @@
+use nalgebra_glm::Vec2;
+
 use super::Aabb;
 
 pub struct CollisionMesh {
@@ -13,12 +15,12 @@ impl CollisionMesh {
         self.aabb.is_colliding(&mesh.aabb)
     }
 
-    pub fn transform(&self, translation: [f32; 2], multiplication: f32) -> CollisionMesh {
-        let aabb = self.aabb * multiplication + translation;
+    pub fn transform(&self, translation: glm::Vec2, scaling: f32) -> CollisionMesh {
+        let aabb = self.aabb * scaling + translation;
         CollisionMesh { aabb }
     }
 
-    pub fn closeest_intersection_vector(&self, mesh: &CollisionMesh) -> glm::Vec2 {
+    pub fn closest_intersection_vector(&self, mesh: &CollisionMesh) -> glm::Vec2 {
         self.aabb.closest_intersection_vector(&mesh.aabb)
     }
 }
@@ -46,7 +48,12 @@ impl CollisionMeshManager {
         identifier
     }
 
-    pub fn get_collision_mesh(&self, identifier: CollisionMeshIdentifier) -> &CollisionMesh {
-        &self.meshes[identifier.index]
+    pub fn get_collision_mesh(
+        &self,
+        identifier: CollisionMeshIdentifier,
+        translation: Vec2,
+        scaling: f32,
+    ) -> CollisionMesh {
+        self.meshes[identifier.index].transform(translation, scaling)
     }
 }

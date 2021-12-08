@@ -96,15 +96,15 @@ impl Aabb {
     }
 }
 
-impl Add<[f32; 2]> for Aabb {
+impl Add<glm::Vec2> for Aabb {
     type Output = Aabb;
 
-    fn add(self, rhs: [f32; 2]) -> Self::Output {
+    fn add(self, rhs: glm::Vec2) -> Self::Output {
         Aabb {
-            min_x: self.min_x + rhs[0],
-            min_y: self.min_y + rhs[1],
-            max_x: self.max_x + rhs[0],
-            max_y: self.max_y + rhs[1],
+            min_x: self.min_x + rhs.x,
+            min_y: self.min_y + rhs.y,
+            max_x: self.max_x + rhs.x,
+            max_y: self.max_y + rhs.y,
         }
     }
 }
