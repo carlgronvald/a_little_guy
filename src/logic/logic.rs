@@ -402,7 +402,7 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                         }
                     }
                 }
-                if test_triangle.approx_is_colliding(&collision_mesh_1.aabb) {
+                if test_triangle.is_colliding(&collision_mesh_1.aabb) {
                     colliding_entities.push((
                         *entity_1,
                         None,
@@ -439,7 +439,8 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                         position.x += collision_vector.x;
                         position.y += collision_vector.y;
                     }
-                    {
+                    if collision_vector.dot(&collision_vector) > 0.0001 {
+                        // We can only normalize if it's a non-zero vector
                         let velocity = ent1entry.get_component_mut::<Velocity>().unwrap();
                         let dvel = Vec2::from(*velocity).dot(&collision_vector.normalize())
                             * collision_vector.normalize();

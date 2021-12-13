@@ -21,6 +21,24 @@ pub enum TriangleSide {
     Ca,
 }
 
+impl TriangleSide {
+    pub fn get_start_corner(self) -> TriangleCorner {
+        match self {
+            Self::Ab => TriangleCorner::A,
+            Self::Bc => TriangleCorner::B,
+            Self::Ca => TriangleCorner::C,
+        }
+    }
+
+    pub fn get_end_corner(self) -> TriangleCorner {
+        match self {
+            Self::Ab => TriangleCorner::B,
+            Self::Bc => TriangleCorner::C,
+            Self::Ca => TriangleCorner::A,
+        }
+    }
+}
+
 #[derive(Debug, EnumIter, Clone, Copy)]
 pub enum TriangleCorner {
     A,
@@ -64,7 +82,7 @@ impl Triangle {
         }
     }
 
-    pub fn closest_intersection_vector(&self, aabb: &Aabb) -> Option<Vec2> {
+    pub fn closest_intersection_vector(&self, aabb: &Aabb) -> Vec2 {
         let mut min_distance = f32::INFINITY;
         let mut closest_vector = None;
         for side in TriangleSide::iter() {
@@ -73,17 +91,100 @@ impl Triangle {
 
             for corner in AabbCorner::iter() {
                 let corner = aabb.get_corner(corner);
-                let projected_distance =
-                    distance_to_side - (corner - self.center_point).dot(&vector_to_side);
-                if projected_distance >= 0.0 && projected_distance < min_distance {
-                    min_distance = projected_distance;
-                    if projected_distance > 0.0 {
-                        closest_vector = Some(vector_to_side * projected_distance);
+                if self.is_point_inside(&corner) {
+                    let projected_distance =
+                        distance_to_side - (corner - self.center_point).dot(&vector_to_side);
+                    if projected_distance >= -1.0 && projected_distance < min_distance {
+                        min_distance = projected_distance;
+                        if projected_distance != 0.0 {
+                            let projected_distance = if projected_distance > 0.0 {
+                                projected_distance
+                            } else {
+                                0.0
+                            };
+                            closest_vector = Some(vector_to_side * projected_distance);
+                        } else {
+                            closest_vector = Some(glm::vec2(0.0, 0.0));
+                        }
                     }
                 }
             }
         }
-        closest_vector
+        if let Some(closest_vector) = closest_vector {
+            return closest_vector;
+        }
+
+        aabb.closest_intersection_vector(&self.surrounding_aabb)
+    }
+
+    pub fn is_point_inside(&self, point: &Vec2) -> bool {
+        for side in TriangleSide::iter() {
+            let start_point = self.get_corner(side.get_start_corner());
+            let end_point = self.get_corner(side.get_end_corner());
+
+            if (end_point.y - start_point.y) * (point.x - start_point.x)
+                + (start_point.x - end_point.x) * (point.y - start_point.y)
+                >= 1.0
+            {
+                return false;
+            }
+        }
+        true
+    }
+
+    pub fn is_colliding(&self, aabb: &Aabb) -> bool {
+        if !self.surrounding_aabb.is_colliding(aabb) {
+            return false;
+        }
+
+        for side in TriangleSide::iter() {
+            let start_point = self.get_corner(side.get_start_corner());
+            let end_point = self.get_corner(side.get_end_corner());
+            let direction_vector = end_point - start_point;
+
+            {
+                // Left side of rectangle
+                let t = (aabb.min_x - start_point.x) / (direction_vector.x);
+                if t >= 0.0 && t <= 1.0 {
+                    let collision_y = start_point.y + t * direction_vector.y;
+                    if collision_y >= aabb.min_y && collision_y <= aabb.max_y {
+                        return true;
+                    }
+                }
+            }
+            {
+                // Right side of rectangle
+                let t = (aabb.max_x - start_point.x) / (direction_vector.x);
+                if t >= 0.0 && t <= 1.0 {
+                    let collision_y = start_point.y + t * direction_vector.y;
+                    if collision_y >= aabb.min_y && collision_y <= aabb.max_y {
+                        return true;
+                    }
+                }
+            }
+            {
+                // Bottom side of rectangle
+                let t = (aabb.min_y - start_point.y) / (direction_vector.y);
+                if t >= 0.0 && t <= 1.0 {
+                    let collision_x = start_point.x + t * direction_vector.x;
+                    if collision_x >= aabb.min_x && collision_x <= aabb.max_x {
+                        return true;
+                    }
+                }
+            }
+            {
+                // Top side of rectangle
+                let t = (aabb.max_y - start_point.y) / (direction_vector.y);
+                if t >= 0.0 && t <= 1.0 {
+                    let collision_x = start_point.x + t * direction_vector.x;
+                    if collision_x >= aabb.min_x && collision_x <= aabb.max_x {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
     }
 
     pub fn approx_is_colliding(&self, aabb: &Aabb) -> bool {
