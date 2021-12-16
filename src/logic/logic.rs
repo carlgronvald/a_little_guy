@@ -97,6 +97,23 @@ pub fn setup_world(
         ),
     );
 
+    for _ in 0..5 {
+
+        world.push(
+            // A firefly
+            (
+                Position { x: 0.0, y: 0.0 },
+                Velocity { dx: 0.0, dy: 0.0 },
+                Friction {},
+                Asset {
+                    name: "firefly".into(),
+                    animation: 0,
+                    animation_start_time: 0.0,
+                },
+                AiRandomWalk { speed: 192.0, center : glm::vec2(0.0,0.0), centering_speed : 0.01 },
+            ),
+        );
+    }
     world.push(
         // A firefly
         (
@@ -108,7 +125,7 @@ pub fn setup_world(
                 animation: 0,
                 animation_start_time: 0.0,
             },
-            AiRandomWalk { speed: 192.0 },
+            AiRandomWalk { speed: 1920.0, center : glm::vec2(0.0,0.0), centering_speed : 0.01  },
         ),
     );
     world.push(
@@ -122,7 +139,7 @@ pub fn setup_world(
                 animation: 0,
                 animation_start_time: 0.0,
             },
-            AiRandomWalk { speed: 192.0 },
+            AiRandomWalk { speed: 1920.0, center : glm::vec2(0.0,0.0), centering_speed : 0.001  },
         ),
     );
     world.push(
@@ -136,21 +153,7 @@ pub fn setup_world(
                 animation: 0,
                 animation_start_time: 0.0,
             },
-            AiRandomWalk { speed: 192.0 },
-        ),
-    );
-    world.push(
-        // A firefly
-        (
-            Position { x: 0.0, y: 0.0 },
-            Velocity { dx: 0.0, dy: 0.0 },
-            Friction {},
-            Asset {
-                name: "firefly".into(),
-                animation: 0,
-                animation_start_time: 0.0,
-            },
-            AiRandomWalk { speed: 192.0 },
+            AiRandomWalk { speed: 1920.0, center : glm::vec2(0.0,0.0), centering_speed : 0.00001  },
         ),
     );
 
@@ -291,11 +294,22 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
 
         let mut start_time = SystemTime::now();
 
-        let test_triangle = Triangle::new(
-            glm::vec2(0.0, -200.0),
-            glm::vec2(200.0, -200.0),
-            glm::vec2(200.0, 0.0),
-        );
+        let test_triangles = vec![
+            Triangle::new(
+                glm::vec2((702.0-800.0)*3.0, -(753.0-800.0)*3.0),
+                glm::vec2((765.0-800.0)*3.0, -(762.0-800.0)*3.0),
+                glm::vec2((711.0-800.0)*3.0, -(723.0-800.0)*3.0),
+            ),
+            Triangle::new(
+                glm::vec2((770.0-800.0)*3.0, -(691.0-800.0)*3.0),
+                glm::vec2((765.0-800.0)*3.0, -(762.0-800.0)*3.0),
+                glm::vec2((711.0-800.0)*3.0, -(723.0-800.0)*3.0),
+            ),
+
+        ];
+        println!("{:?}", test_triangles);
+
+        let world_collision_mesh = collision::WorldCollisionMesh::new(test_triangles);
 
         loop {
             resources.insert(Time {
@@ -402,11 +416,11 @@ pub fn start_logic_thread(rx: WindowToLogicReceiver, tx: LogicToWindowSender) ->
                         }
                     }
                 }
-                if test_triangle.is_colliding(&collision_mesh_1.aabb) {
+                if let Some(closest_intersection_vector) = world_collision_mesh.find_collision(&collision_mesh_1.aabb) {
                     colliding_entities.push((
                         *entity_1,
                         None,
-                        test_triangle.closest_intersection_vector(&collision_mesh_1.aabb),
+                        closest_intersection_vector,
                     ));
                 }
             }

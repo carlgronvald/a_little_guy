@@ -26,10 +26,12 @@ pub fn update_lives(life: &mut TimedLife, #[resource] time: &Time) {
 #[system(for_each)]
 pub fn random_walk_ai(
     velocity: &mut Velocity,
+    position : &Position,
     ai_random_walk: &AiRandomWalk,
     #[resource] time: &Time,
     #[resource] rng: &mut StdRng,
 ) {
-    velocity.dx += rng.gen_range(-1.0..1.0) * time.elapsed_seconds * ai_random_walk.speed;
-    velocity.dy += rng.gen_range(-1.0..1.0) * time.elapsed_seconds * ai_random_walk.speed;
+    let center_dir = ai_random_walk.center - glm::Vec2::from(*position);
+    velocity.dx += rng.gen_range(-1.0..1.0) * time.elapsed_seconds * ai_random_walk.speed + center_dir.x * ai_random_walk.centering_speed;
+    velocity.dy += rng.gen_range(-1.0..1.0) * time.elapsed_seconds * ai_random_walk.speed + center_dir.y * ai_random_walk.centering_speed;
 }

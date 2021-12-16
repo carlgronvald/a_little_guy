@@ -90,4 +90,6 @@ impl Default for Status {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct AiRandomWalk {
     pub speed: f32,
+    pub centering_speed : f32,
+    pub center : Vec2,
 }

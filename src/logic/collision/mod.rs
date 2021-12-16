@@ -8,3 +8,6 @@ mod triangle;
 pub use triangle::Triangle;
 
 pub mod ray;
+
+mod world_collision_mesh;
+pub use world_collision_mesh::WorldCollisionMesh;

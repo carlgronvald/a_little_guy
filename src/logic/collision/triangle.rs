@@ -4,6 +4,7 @@ use super::{aabb::AabbCorner, Aabb};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
+#[derive(Debug)]
 pub struct Triangle {
     a: Vec2,
     b: Vec2,
@@ -48,8 +49,11 @@ pub enum TriangleCorner {
 
 impl Triangle {
     pub fn new(a: Vec2, b: Vec2, c: Vec2) -> Self {
-        if glm::vec2(b.y - a.y, b.x - a.x).dot(&(c - b)) <= 0.0 {
-            panic!("Triangles must be counter clockwise!")
+        let mut b = b;
+        let mut c = c;
+        if (a.x * b.y - b.x * a.y) + (b.x * c.y - c.x * b.y) + (c.x * a.y - c.y * a.x) <= 0.0 {
+            println!("Triangles must be counter clockwise!");
+            std::mem::swap(&mut b, &mut c);
         }
         // TODO: MAKE SURE TRIANGLES ARE ALWAYS GIVEN COUNTERCLOCKWISE
         let min_x = *[a.x, b.x, c.x]
